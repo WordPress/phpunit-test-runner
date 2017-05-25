@@ -24,7 +24,8 @@ In order for the test suite runner to execute correctly, you’ll need to set th
   - `WPT_DB_PASSWORD`
   - `WPT_DB_NAME`
 - General test environment details:
-  - `WPT_TARGET_PATH` - Path to the directory where the WordPress develop checkout can be placed.
+  - `WPT_PREPARE_DIR` - Path to the directory where files can be prepared before being delivered to the environment.
+  - `WPT_TEST_DIR` - Path to the directory where the WordPress develop checkout can be placed and tests can be run.
   - `WPT_REPORT_API_KEY` - API key to authenticate with the reporting service.
 - SSH keys for target server (if using a CI service):
   - `WPT_SSH_HOST`
