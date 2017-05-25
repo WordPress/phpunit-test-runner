@@ -4,8 +4,10 @@
 # Cleans up the environment after the test run.
 ###
 
+# @todo check required environment variables; exit if not met
 
-# Reset the database to its original condition.
+
+# @todo Reset the database to its original condition by dropping tables
 
 
-# Delete all files delivered to the test environment.
+# @todo Delete all files delivered to the test environment.
