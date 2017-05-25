@@ -8,16 +8,15 @@ At a high level, the test suite runner:
 2. Runs the PHPUnit tests in the test environment.
 3. Reports the PHPUnit test results to WordPress.org
 4. Cleans up the test suite environment.
-Configuring
+
+## Configuring
 
 The test suite runner can be used in one of two ways:
-
 
 1. With Travis (or Circle or some other CI service) as the controller that connects to the remote test environment.
 2. With the runner cloned to and run directly within the test environment.
 
 In order for the test suite runner to execute correctly, you’ll need to set these environment variables:
-
 
 - Credentials for a database that can be written to and reset:
   - `WPT_DB_HOST`
@@ -40,13 +39,11 @@ To configure the test suite to run from Travis:
 
 To configure the test suite to run directly within the test environment…
 
-
-Running
+## Running
 
 The test suite runner is run in four steps.
 
-
-1. Prepare
+### 1. Prepare
 
 The prepare step:
 
@@ -55,28 +52,24 @@ The prepare step:
 3. Downloads `phpunit.phar` and puts it in the test environment.
 4. Generates `wp-tests-config.php` and puts it in the test environment.
 
-
-2. Run 
+### 2. Run 
 
 Calls `phpunit` with the correct flags to generate json output (--log-json).
 
-
-3. Report
+### 3. Report
 
 The report step:
 
 1. Processes PHPUnit result output to generate JSON to send to WordPress.org
 2. Sends the JSON to WordPress.org
 
-
-4. Cleanup
+### 4. Cleanup
 
 The cleanup step:
 
 1. Resets the database.
 2. Deletes all files delivered to the test environment.
 
-
-Contributing
+## Contributing
 
 tk
