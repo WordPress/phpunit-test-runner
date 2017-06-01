@@ -20,7 +20,8 @@ bash check-env.sh
 mkdir -p $WPT_PREPARE_DIR
 git clone --depth=1 git@github.com:WordPress/wordpress-develop.git $WPT_PREPARE_DIR
 
-# @todo Download phpunit.phar
+# Download phpunit.phar
+wget -O $WPT_PREPARE_DIR/phpunit.phar https://phar.phpunit.de/phpunit-5.7.phar
 
 # @todo Generate wp-tests-config.php
 
