@@ -16,22 +16,14 @@ The test suite runner can be used in one of two ways:
 1. With Travis (or Circle or some other CI service) as the controller that connects to the remote test environment.
 2. With the runner cloned to and run directly within the test environment.
 
-In order for the test suite runner to execute correctly, you’ll need to set these environment variables:
+The test runner is configured through environment variables, documented in [`.env.default`](.env.default). In a CI service, you can set these environment variables through the service's web console. With a direct clone, you can:
 
-- Credentials for a database that can be written to and reset:
-  - `WPT_DB_HOST`
-  - `WPT_DB_USER`
-  - `WPT_DB_PASSWORD`
-  - `WPT_DB_NAME`
-- General test environment details:
-  - `WPT_PREPARE_DIR` - Path to the directory where files can be prepared before being delivered to the environment.
-  - `WPT_TEST_DIR` - Path to the directory where the WordPress develop checkout can be placed and tests can be run.
-  - `WPT_REPORT_API_KEY` - API key to authenticate with the reporting service.
-- SSH keys for target server (if using a CI service):
-  - `WPT_SSH_HOST`
-  - `WPT_SSH_PORT`
-  - `WPT_SSH_USERNAME`
-  - `WPT_SSH_PRIVATE_KEY` - This might be different for Travis vs Circle.
+    # Copy the default .env file.
+    cp .env.default .env
+    # Edit the .env file to define your variables.
+    vim .env
+    # Load your variables into scope.
+    source .env
 
 To configure the test suite to run from Travis:
 
