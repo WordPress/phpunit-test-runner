@@ -36,7 +36,7 @@ In order for the test suite runner to execute correctly, you’ll need to set th
 To configure the test suite to run from Travis:
 
 1. Fork the example repository found here (Link to example Travis setup).
-2. 
+2.
 
 To configure the test suite to run directly within the test environment…
 
@@ -53,9 +53,9 @@ The prepare step:
 3. Downloads `phpunit.phar` and puts it in the test environment.
 4. Generates `wp-tests-config.php` and puts it in the test environment.
 
-### 2. Run 
+### 2. Run
 
-Calls `phpunit` with the correct flags to generate json output (--log-json).
+Calls `phpunit` to produce tests/phpunit/build/logs/junit.xml as defined by the core phpunit.xml.
 
 ### 3. Report
 
