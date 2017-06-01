@@ -32,7 +32,7 @@ else
 fi
 sed $ioption "s/youremptytestdbnamehere/$WPT_DB_NAME/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 sed $ioption "s/yourusernamehere/$WPT_DB_USER/" "$WPT_PREPARE_DIR"/wp-tests-config.php
-sed $ioption "s/yourpasswordhere/$WPT_DB_PASS/" "$WPT_PREPARE_DIR"/wp-tests-config.php
+sed $ioption "s/yourpasswordhere/$WPT_DB_PASSWORD/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 sed $ioption "s|localhost|${WPT_DB_HOST}|" "$WPT_PREPARE_DIR"/wp-tests-config.php
 
 # Deliver all files to test environment
