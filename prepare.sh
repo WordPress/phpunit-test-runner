@@ -4,16 +4,25 @@
 # Prepares the environment for the test run.
 ###
 
-# @todo check required environment variables; exit if not met
+set -ex
 
+# Check required environment variables
+bash check-env.sh
 
 # @todo create the database if one doesn't already exist
 
 
-# @todo clone WordPress develop at the target hash, deliver files to test environment
+
+# @todo empty the database
 
 
-# @todo download phpunit.phar and deliver to test environment
+# Clone WordPress develop at the target hash
+mkdir -p $WPT_PREPARE_DIR
+git clone --depth=1 git@github.com:WordPress/wordpress-develop.git $WPT_PREPARE_DIR
 
+# @todo Download phpunit.phar
 
-# @todo generate wp-tests-config.php and deliver to test environment
+# @todo Generate wp-tests-config.php
+
+# Deliver all files to test environment
+rsync -rv --exclude='.git/' $WPT_PREPARE_DIR $WPT_SSH_CONNECT:$WPT_TARGET_DIR

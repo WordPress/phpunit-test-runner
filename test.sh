@@ -4,7 +4,9 @@
 # Runs the PHPUnit test suite in the test environment.
 ###
 
-# @todo check required environment variables; exit if not met
+set -ex
 
+# Check required environment variables
+bash check-env.sh
 
 # @todo run phpunit in the test environment with the --log-xml flag
