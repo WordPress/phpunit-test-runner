@@ -9,6 +9,17 @@ set -ex
 # Check required environment variables
 bash check-env.sh
 
+# Set the ssh private key if it's set
+if [ -n "$WPT_SSH_PRIVATE_KEY_BASE64" ]; then
+	# Turn off command traces while dealing with the private key
+	set +x
+	echo 'Securely extracting WPT_SSH_PRIVATE_KEY_BASE64 into ~/.ssh/id_rsa'
+	echo $WPT_SSH_PRIVATE_KEY_BASE64 | base64 --decode > ~/.ssh/id_rsa
+	chmod 600 ~/.ssh/id_rsa
+	# Restore command traces for the rest of the script
+	set -x
+fi
+
 # @todo create the database if one doesn't already exist
 
 
