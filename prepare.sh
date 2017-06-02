@@ -37,14 +37,14 @@ wget -O $WPT_PREPARE_DIR/phpunit.phar https://phar.phpunit.de/phpunit-5.7.phar
 # Generate wp-tests-config.php
 cp "$WPT_PREPARE_DIR"/wp-tests-config-sample.php "$WPT_PREPARE_DIR"/wp-tests-config.php
 if [[ $(uname -s) == 'Darwin' ]]; then
-	local ioption='-i .bak'
+	IOPTION='-i .bak'
 else
-	local ioption='-i'
+	IOPTION='-i'
 fi
-sed $ioption "s/youremptytestdbnamehere/$WPT_DB_NAME/" "$WPT_PREPARE_DIR"/wp-tests-config.php
-sed $ioption "s/yourusernamehere/$WPT_DB_USER/" "$WPT_PREPARE_DIR"/wp-tests-config.php
-sed $ioption "s/yourpasswordhere/$WPT_DB_PASSWORD/" "$WPT_PREPARE_DIR"/wp-tests-config.php
-sed $ioption "s|localhost|${WPT_DB_HOST}|" "$WPT_PREPARE_DIR"/wp-tests-config.php
+sed $IOPTION "s/youremptytestdbnamehere/$WPT_DB_NAME/" "$WPT_PREPARE_DIR"/wp-tests-config.php
+sed $IOPTION "s/yourusernamehere/$WPT_DB_USER/" "$WPT_PREPARE_DIR"/wp-tests-config.php
+sed $IOPTION "s/yourpasswordhere/$WPT_DB_PASSWORD/" "$WPT_PREPARE_DIR"/wp-tests-config.php
+sed $IOPTION "s|localhost|${WPT_DB_HOST}|" "$WPT_PREPARE_DIR"/wp-tests-config.php
 
 # Deliver all files to test environment
 rsync -rv --exclude='.git/' $WPT_PREPARE_DIR $WPT_SSH_CONNECT:$WPT_TARGET_DIR
