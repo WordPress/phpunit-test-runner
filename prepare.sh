@@ -47,4 +47,4 @@ sed $IOPTION "s/yourpasswordhere/$WPT_DB_PASSWORD/" "$WPT_PREPARE_DIR"/wp-tests-
 sed $IOPTION "s|localhost|${WPT_DB_HOST}|" "$WPT_PREPARE_DIR"/wp-tests-config.php
 
 # Deliver all files to test environment
-rsync -rv --exclude='.git/' $WPT_PREPARE_DIR $WPT_SSH_CONNECT:$WPT_TARGET_DIR
+rsync -rv --exclude='.git/' -e "ssh -o StrictHostKeyChecking=no" $WPT_PREPARE_DIR $WPT_SSH_CONNECT:$WPT_TARGET_DIR
