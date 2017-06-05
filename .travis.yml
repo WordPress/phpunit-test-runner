@@ -2,6 +2,10 @@ sudo: false
 
 language: php
 
+branches:
+  only:
+    - master
+
 install:
   - bash prepare.sh
 
