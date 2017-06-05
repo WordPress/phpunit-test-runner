@@ -25,6 +25,13 @@ The test runner is configured through environment variables, documented in [`.en
     # Load your variables into scope.
     source .env
 
+If the controller needs to connect to a remote environment, you'll need to:
+
+    # 1. Create a SSH key pair for the controller to use
+    ssh-keygen -t rsa -b 4096 -C "travis@travis-ci.org"
+    # 2. base64 encode the private key for use with the environment variable
+    cat ~/.ssh/id_rsa | base64 --wrap=0
+
 To configure the test suite to run from Travis:
 
 1. Fork the example repository found here (Link to example Travis setup).
