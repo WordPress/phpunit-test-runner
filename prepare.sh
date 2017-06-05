@@ -17,7 +17,7 @@ if [ -n "$WPT_SSH_PRIVATE_KEY_BASE64" ]; then
 	echo $WPT_SSH_PRIVATE_KEY_BASE64 | base64 --decode > ~/.ssh/id_rsa
 	chmod 600 ~/.ssh/id_rsa
 	echo 'Testing SSH connection with credentials'
-	ssh -T -o StrictHostKeyChecking=no $WPT_SSH_CONNECT
+	ssh -q -o StrictHostKeyChecking=no $WPT_SSH_CONNECT exit
 fi
 # Restore command traces for the rest of the script
 set -x
