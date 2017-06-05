@@ -16,6 +16,8 @@ if [ -n "$WPT_SSH_PRIVATE_KEY_BASE64" ]; then
 	echo 'Securely extracting WPT_SSH_PRIVATE_KEY_BASE64 into ~/.ssh/id_rsa'
 	echo $WPT_SSH_PRIVATE_KEY_BASE64 | base64 --decode > ~/.ssh/id_rsa
 	chmod 600 ~/.ssh/id_rsa
+	echo 'Testing SSH connection with credentials'
+	ssh -T $WPT_SSH_CONNECT
 fi
 # Restore command traces for the rest of the script
 set -x
