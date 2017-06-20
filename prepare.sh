@@ -44,11 +44,11 @@ if [[ $(uname -s) == 'Darwin' ]]; then
 else
 	IOPTION='-i'
 fi
+sed $IOPTION "s/wptests_/$WPT_TABLE_PREFIX/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 sed $IOPTION "s/youremptytestdbnamehere/$WPT_DB_NAME/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 sed $IOPTION "s/yourusernamehere/$WPT_DB_USER/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 sed $IOPTION "s/yourpasswordhere/$WPT_DB_PASSWORD/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 sed $IOPTION "s/localhost/$WPT_DB_HOST/" "$WPT_PREPARE_DIR"/wp-tests-config.php
-sed $IOPTION "s/wptests_/$WPT_TABLE_PREFIX/" "$WPT_PREPARE_DIR"/wp-tests-config.php
 
 # Deliver all files to test environment
 rsync -rv --exclude='.git/' -e "ssh -o StrictHostKeyChecking=no" $WPT_PREPARE_DIR/* $WPT_SSH_CONNECT:$WPT_TEST_DIR
