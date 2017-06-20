@@ -13,4 +13,4 @@ script:
   - bash test.sh
 
 after_script:
-  - bash cleanup.sh
+  - php cleanup.php
