@@ -7,10 +7,10 @@ branches:
     - master
 
 install:
-  - bash prepare.sh
+  - php prepare.php
 
 script:
   - bash test.sh
 
 after_script:
-  - bash cleanup.sh
+  - php cleanup.php
