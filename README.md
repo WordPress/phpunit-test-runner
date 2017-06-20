@@ -45,7 +45,7 @@ The test suite runner is run in four steps.
 
 ### 1. Prepare
 
-The prepare step:
+The [`prepare.php`](prepare.php) step:
 
 1. Extracts the base64-encoded SSH private key, if necessary.
 2. Clones the master branch of the WordPress develop git repo into the preparation directory.
@@ -53,22 +53,22 @@ The prepare step:
 4. Generates `wp-tests-config.php` and puts it into the preparation directory.
 5. Delivers the prepared test directory to the test environment.
 
-### 2. Run
+### 2. Test
 
-The run step:
+The [`test.php`](test.php) step:
 
 1. Calls `php phpunit.phar` to produce `tests/phpunit/build/logs/junit.xml`.
 
 ### 3. Report
 
-The report step:
+The [`report.php`](report.php) step:
 
 1. Processes PHPUnit XML log into a JSON blob.
 2. Sends the JSON to WordPress.org.
 
 ### 4. Cleanup
 
-The cleanup step:
+The [`cleanup.php`](cleanup.php) step:
 
 1. Resets the database.
 2. Deletes all files delivered to the test environment.
