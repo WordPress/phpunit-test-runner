@@ -22,6 +22,12 @@ function check_required_env() {
 			error_message( $var . ' must be set as an environment variable.' );
 		}
 	}
+
+	if ( false === getenv( 'WPT_SSH_CONNECT' )
+		&& getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
+		error_message( 'WPT_TEST_DIR must be the same as WPT_PREPARE_DIR when running locally.' );
+	}
+
 	log_message( 'Environment variables pass checks.' );
 }
 
