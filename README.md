@@ -25,6 +25,11 @@ The test runner is configured through environment variables, documented in [`.en
     # Load your variables into scope.
     source .env
 
+If you only have one database for test runs, you can achieve concurrency by appending build ids:
+
+    export WPT_TEST_DIR=~/wp-unit-tests-$TRAVIS_BUILD_NUMBER
+    export WPT_TABLE_PREFIX=wptests_$TRAVIS_BUILD_NUMBER\_
+
 If the controller needs to connect to a remote environment, you'll need to:
 
     # 1. Create a SSH key pair for the controller to use
