@@ -16,7 +16,9 @@ The test suite runner can be used in one of two ways:
 1. With Travis (or Circle or some other CI service) as the controller that connects to the remote test environment.
 2. With the runner cloned to and run directly within the test environment.
 
-The test runner is configured through environment variables, documented in [`.env.default`](.env.default). In a CI service, you can set these environment variables through the service's web console. With a direct clone, you can:
+The test runner is configured through environment variables, documented in [`.env.default`](.env.default). It shouldn't need any code modifications; in fact, please refrain from editing the scripts entirely, as it will make it easier to stay up to date.
+
+In a CI service, you can set these environment variables through the service's web console. With a direct Git clone, you can:
 
     # Copy the default .env file.
     cp .env.default .env
@@ -30,19 +32,12 @@ If you only have one database for test runs, you can achieve concurrency by appe
     export WPT_TEST_DIR=wp-test-runner-$TRAVIS_BUILD_NUMBER
     export WPT_TABLE_PREFIX=wptests_$TRAVIS_BUILD_NUMBER\_
 
-If the controller needs to connect to a remote environment, you'll need to:
+If the controller needs to connect to a remote environment, you'll need to have the CI job configure a SSH key:
 
     # 1. Create a SSH key pair for the controller to use
     ssh-keygen -t rsa -b 4096 -C "travis@travis-ci.org"
     # 2. base64 encode the private key for use with the environment variable
     cat ~/.ssh/id_rsa | base64 --wrap=0
-
-To configure the test suite to run from Travis:
-
-1. Fork the example repository found here (Link to example Travis setup).
-2.
-
-To configure the test suite to run directly within the test environment…
 
 ## Running
 
@@ -52,21 +47,24 @@ The test suite runner is run in four steps.
 
 The prepare step:
 
-1. Creates the database if one doesn’t already exist.
-2. Clones the WordPress develop git repo at the specified hash, delivers the files to the test environment.
-3. Downloads `phpunit.phar` and puts it in the test environment.
-4. Generates `wp-tests-config.php` and puts it in the test environment.
+1. Extracts the base64-encoded SSH private key, if necessary.
+2. Clones the master branch of the WordPress develop git repo into the preparation directory.
+3. Downloads `phpunit.phar` to the preparation directory.
+4. Generates `wp-tests-config.php` and puts it into the preparation directory.
+5. Delivers the prepared test directory to the test environment.
 
 ### 2. Run
 
-Calls `phpunit` to produce tests/phpunit/build/logs/junit.xml as defined by the core phpunit.xml.
+The run step:
+
+1. Calls `php phpunit.phar` to produce `tests/phpunit/build/logs/junit.xml`.
 
 ### 3. Report
 
 The report step:
 
-1. Processes PHPUnit result output to generate JSON to send to WordPress.org
-2. Sends the JSON to WordPress.org
+1. Processes PHPUnit XML log into a JSON blob.
+2. Sends the JSON to WordPress.org.
 
 ### 4. Cleanup
 
