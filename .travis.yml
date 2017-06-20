@@ -10,7 +10,7 @@ install:
   - php prepare.php
 
 script:
-  - bash test.sh
+  - php test.php
 
 after_script:
   - php cleanup.php
