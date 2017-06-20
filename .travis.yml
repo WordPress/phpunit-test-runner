@@ -7,7 +7,7 @@ branches:
     - master
 
 install:
-  - bash prepare.sh
+  - php prepare.php
 
 script:
   - bash test.sh

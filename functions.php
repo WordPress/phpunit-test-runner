@@ -12,6 +12,10 @@ function check_required_env() {
 	$required = array(
 		'WPT_PREPARE_DIR',
 		'WPT_TEST_DIR',
+		'WPT_DB_NAME',
+		'WPT_DB_USER',
+		'WPT_DB_PASSWORD',
+		'WPT_DB_HOST',
 	);
 	foreach( $required as $var ) {
 		if ( false === getenv( $var ) ) {
@@ -53,4 +57,14 @@ function log_message( $message ) {
 function error_message( $message ) {
 	fwrite( STDERR, 'Error: ' . $message . PHP_EOL );
 	exit( 1 );
+}
+
+/**
+ * Add a trailing slash to the string
+ *
+ * @param string
+ * @return string
+ */
+function trailingslashit( $string ) {
+	return rtrim( $string, '/' ) . '/';
 }
