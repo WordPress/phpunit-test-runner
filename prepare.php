@@ -46,8 +46,10 @@ $contents = str_replace( array_keys( $search_replace ), array_values( $search_re
 file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
 
 // Deliver all files to test environment
-perform_operations( array(
-	'rsync -rv --exclude=".git/" -e "ssh -o StrictHostKeyChecking=no" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
-) );
+if ( false !== $WPT_SSH_CONNECT ) {
+	perform_operations( array(
+		'rsync -rv --exclude=".git/" -e "ssh -o StrictHostKeyChecking=no" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
+	) );
+}
 
 log_message( 'Success: Prepared environment.' );
