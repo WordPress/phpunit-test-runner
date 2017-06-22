@@ -12,6 +12,7 @@ check_required_env();
 // Bring some environment variables into scope
 $WPT_PREPARE_DIR = getenv( 'WPT_PREPARE_DIR' );
 $WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
+$WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no';
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 
 // Set the ssh private key if it's set
@@ -21,7 +22,7 @@ if ( false !== $WPT_SSH_PRIVATE_KEY_BASE64 ) {
 	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $WPT_SSH_PRIVATE_KEY_BASE64 ) );
 	perform_operations( array(
 		'chmod 600 ~/.ssh/id_rsa',
-		'ssh -q -o StrictHostKeyChecking=no ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' exit',
+		'ssh -q ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' exit',
 	) );
 }
 
@@ -48,7 +49,7 @@ file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
 // Deliver all files to test environment
 if ( false !== $WPT_SSH_CONNECT ) {
 	perform_operations( array(
-		'rsync -rv --exclude=".git/" -e "ssh -o StrictHostKeyChecking=no" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
+		'rsync -rv --exclude=".git/" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
 	) );
 }
 
