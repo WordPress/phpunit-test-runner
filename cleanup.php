@@ -12,6 +12,7 @@ check_required_env();
 // Bring some environment variables into scope
 $WPT_PREPARE_DIR = getenv( 'WPT_PREPARE_DIR' );
 $WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
+$WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no';
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 
 // Clean up the preparation directory
@@ -24,6 +25,6 @@ perform_operations( array(
 // Clean up the test directory in remote environments
 if ( false !== $WPT_SSH_CONNECT ) {
 	perform_operations( array(
-		'ssh -o StrictHostKeyChecking=no ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( 'rm -r ' . $WPT_TEST_DIR ),
+		'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( 'rm -r ' . $WPT_TEST_DIR ),
 	) );
 }
