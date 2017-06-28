@@ -1,0 +1,13 @@
+{
+  "name": "octalmage/wp-unit-test-runner",
+  "type": "library",
+  "repositories": [
+    {
+      "type": "git",
+      "url": "https://github.com/octalmage/wp-unit-test-api-client-php.git"
+    }
+  ],
+  "require": {
+    "octalmage/wp-unit-test-api-client-php": "*@dev"
+  }
+}
