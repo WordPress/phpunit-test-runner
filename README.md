@@ -9,6 +9,8 @@ At a high level, the test suite runner:
 3. Reports the PHPUnit test results to WordPress.org
 4. Cleans up the test suite environment.
 
+The test suite runner is designed to be used without any file modification. Configuration happens with a series of environment variables. Use the [repository wiki](../../wiki) to document implementation details, to avoid README conflicts with the upstream.
+
 ## Configuring
 
 The test suite runner can be used in one of two ways:
