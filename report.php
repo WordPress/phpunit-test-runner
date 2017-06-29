@@ -32,7 +32,16 @@ perform_operations( array(
 ) );
 
 log_message( 'Processing and uploading junit.xml' );
-$success = upload( processJUnitXML( './junit.xml' ), $rev, $WPT_REPORT_API_KEY );
+
+$xml = file_get_contents( './junit.xml' );
+$results = process_junit_xml( $xml );
+
+$meta = array(
+	'php_version' => phpversion(),
+	'wp_version' => get_wordpress_version( $WPT_PREPARE_DIR ),
+);
+
+$success = upload( $results, $rev, $meta, $WPT_REPORT_API_KEY );
 
 if ( $success ) {
 	log_message( 'Results successfully uploaded' );
@@ -40,10 +49,11 @@ if ( $success ) {
 	log_message( 'Error uploading results' );
 }
 
-function upload( $content, $rev, $api_key ) {
+function upload( $content, $rev, $meta, $api_key ) {
 	$data = array(
 		'results' => $content,
 		'commit' => $rev,
+		'meta' => json_encode( $meta ),
 	);
 
 	$access_token = base64_encode( $api_key );
