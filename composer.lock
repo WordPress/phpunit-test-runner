@@ -12,7 +12,7 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/octalmage/wp-unit-test-api-client-php.git",
-                "reference": "2932b0b9b5c759412bca529abdee6e9f04a64e65"
+                "reference": "fad175fc72706762c5bfa20b1319689cbe8f5b5a"
             },
             "require": {
                 "ext-curl": "*",
@@ -53,7 +53,7 @@
                 "sdk",
                 "swagger"
             ],
-            "time": "2017-06-21 14:45:34"
+            "time": "2017-06-29 21:51:39"
         }
     ],
     "packages-dev": [],
