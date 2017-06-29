@@ -95,8 +95,7 @@ function processJUnitXML( $path )
 	);
 
 	$results['testsuites'] = array();
-	foreach ($project->testsuite as $testsuite) {
-		$results['testsuites'][ (string) $testsuite['name'] ] = array();
+	foreach ( $project->testsuite as $testsuite ) {
 		$results['testsuites'][ (string) $testsuite['name'] ] = array(
 			'name' => (string) $testsuite['name'],
 			'tests' => (string) $testsuite['tests'],
