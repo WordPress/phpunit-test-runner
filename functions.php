@@ -74,3 +74,45 @@ function error_message( $message ) {
 function trailingslashit( $string ) {
 	return rtrim( $string, '/' ) . '/';
 }
+
+/**
+ * Process JUnit test results and return JSON. The resulting JSON will only
+ * include failures.
+ *
+ * @param  string $path Path to the JUnit XML.
+ * @return string
+ */
+function processJUnitXML( $path )
+{
+	$xml = simplexml_load_file( $path );
+	$project = $xml->testsuite;
+	$results = array();
+
+	$results = array(
+		'tests' => (string) $project['tests'],
+		'failures' => (string) $project['failures'],
+		'errors' => (string) $project['errors'],
+	);
+
+	$results['testsuites'] = array();
+	foreach ($project->testsuite as $testsuite) {
+		$results['testsuites'][ (string) $testsuite['name'] ] = array();
+		$results['testsuites'][ (string) $testsuite['name'] ] = array(
+			'name' => (string) $testsuite['name'],
+			'tests' => (string) $testsuite['tests'],
+			'failures' => (string) $testsuite['failures'],
+			'errors' => (string) $testsuite['errors']
+		);
+		$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = array();
+		foreach ( $testsuite->testcase as $testcase ) {
+			if ( isset( $testcase->failure ) ) {
+				$results['testsuites'][ (string) $testsuite['name'] ]['testcases'][ (string) $testcase['name'] ] = array(
+					'name' => (string) $testcase['name'],
+					'failure' => (string) $testcase->failure,
+				);
+			}
+		}
+	}
+
+	return json_encode( $results );
+}
