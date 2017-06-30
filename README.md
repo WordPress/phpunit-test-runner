@@ -31,12 +31,12 @@ With a direct Git clone, you can:
 
 In a CI service, you can set these environment variables through the service's web console. Importantly, the `WPT_SSH_CONNECT` environment variable determines whether the test suite is run locally or against a remote environment.
 
-If you only have one database for test runs, you can achieve concurrency by appending build ids:
+Concurrently run tests in the same environment by appending build ids to the test directory and table prefix:
 
     export WPT_TEST_DIR=wp-test-runner-$TRAVIS_BUILD_NUMBER
     export WPT_TABLE_PREFIX=wptests_$TRAVIS_BUILD_NUMBER\_
 
-If the controller needs to connect to a remote environment, you'll need to have the CI job configure a SSH key:
+Connect to a remote environment over SSH by having the CI job provision the SSH key:
 
     # 1. Create a SSH key pair for the controller to use
     ssh-keygen -t rsa -b 4096 -C "travis@travis-ci.org"
@@ -44,6 +44,16 @@ If the controller needs to connect to a remote environment, you'll need to have 
     cat ~/.ssh/id_rsa | base64 --wrap=0
     # 3. Append id_rsa.pub to authorized_keys so the CI service can SSH in
     cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+Use a more complex SSH connection process by creating a SSH alias:
+
+    # 1. Add the following to ~/.ssh/config to create a 'wpt' alias
+    Host wpt
+      Hostname 123.45.67.89
+      User wpt
+      Port 1234
+    # 2. Use 'wpt' wherever you might normally use a SSH connection string
+    ssh wpt
 
 ## Running
 
