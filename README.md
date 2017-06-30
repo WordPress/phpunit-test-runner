@@ -20,9 +20,7 @@ The test suite runner can be used in one of two ways:
 
 The test runner is configured through environment variables, documented in [`.env.default`](.env.default). It shouldn't need any code modifications; in fact, please refrain from editing the scripts entirely, as it will make it easier to stay up to date.
 
-Importantly, the `WPT_SSH_CONNECT` environment variable determines whether the test suite is run locally or against a remote environment.
-
-In a CI service, you can set these environment variables through the service's web console. With a direct Git clone, you can:
+With a direct Git clone, you can:
 
     # Copy the default .env file.
     cp .env.default .env
@@ -30,6 +28,8 @@ In a CI service, you can set these environment variables through the service's w
     vim .env
     # Load your variables into scope.
     source .env
+
+In a CI service, you can set these environment variables through the service's web console. Importantly, the `WPT_SSH_CONNECT` environment variable determines whether the test suite is run locally or against a remote environment.
 
 If you only have one database for test runs, you can achieve concurrency by appending build ids:
 
