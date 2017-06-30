@@ -49,6 +49,21 @@ If the controller needs to connect to a remote environment, you'll need to have 
 
 The test suite runner is run in four steps.
 
+### 0. Requirements
+
+Both the prep and test environments must meet some basic requirements.
+
+Prep environment:
+
+* PHP 5.6 or greater (to run scripts).
+* Utilities: `git`, `rsync`, `wget`, `unzip`.
+
+Test environment:
+
+* PHP 5.6 or greater with Phar support enabled (for PHPUnit).
+* MySQL or MariaDB with access to a writable database.
+* Writable filesystem for the entire test directory (see [#40910](https://core.trac.wordpress.org/ticket/40910) for details on why).
+
 ### 1. Prepare
 
 The [`prepare.php`](prepare.php) step:
