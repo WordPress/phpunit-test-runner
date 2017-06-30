@@ -42,6 +42,8 @@ If the controller needs to connect to a remote environment, you'll need to have 
     ssh-keygen -t rsa -b 4096 -C "travis@travis-ci.org"
     # 2. base64 encode the private key for use with the environment variable
     cat ~/.ssh/id_rsa | base64 --wrap=0
+    # 3. Append id_rsa.pub to authorized_keys so the CI service can SSH in
+    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
 ## Running
 
