@@ -51,6 +51,7 @@ Use a more complex SSH connection process by creating a SSH alias:
     Host wpt
       Hostname 123.45.67.89
       User wpt
+      Port 1234
     # 2. Use 'wpt' wherever you might normally use a SSH connection string
     ssh wpt
 
