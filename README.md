@@ -107,3 +107,7 @@ The [`cleanup.php`](cleanup.php) step:
 ## Contributing
 
 tk
+
+## License
+
+See [LICENSE](LICENSE) for project license.
