@@ -46,8 +46,25 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 }
 // Log environment details that are useful to have reported.
 \$env = array(
-	'php_version'  => phpversion(),
+	'php_version'    => phpversion(),
+	'php_modules'    => array(),
+	'system_utils'   => array(),
 );
+\$php_modules = array(
+	'imagick',
+	'filter',
+	'xml',
+	'pcre',
+	'mod_xml',
+	'bcmath',
+);
+foreach( \$php_modules as \$php_module ) {
+	\$env['php_modules'][ \$php_module ] = phpversion( \$php_module );
+}
+\$ret = shell_exec( 'convert --version' );
+preg_match( '#Version: ImageMagick ([^\s]+)#', \$ret, \$matches );
+\$env['system_utils']['imagemagick'] = isset( \$matches[1] ) ? \$matches[1] : false;
+\$env['system_utils']['ghostscript'] = shell_exec( 'gs --version' );
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 EOT;
 $logger_replace_string = '// wordpress/wp-config.php will be ignored.' . PHP_EOL;
