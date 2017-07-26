@@ -20,7 +20,6 @@ $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 perform_operations( array(
 	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/.git' ),
 	'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR ),
-	'rm  ./junit.xml',
 ) );
 
 // Clean up the test directory in remote environments

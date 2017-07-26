@@ -20,40 +20,37 @@ log_message('Getting SVN Revision');
 $rev = exec('git -C ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
 
 log_message('Copying junit.xml results');
-$junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/junit.xml';
+$junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
 
 if ( false !== $WPT_SSH_CONNECT ) {
 	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
 }
 
-$junit_exec = 'rsync -rv ' . $junit_location . ' ./';
+$junit_exec = 'rsync -rv ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
 perform_operations( array(
 	$junit_exec,
 ) );
 
 log_message( 'Processing and uploading junit.xml' );
 
-$xml = file_get_contents( './junit.xml' );
+$xml = file_get_contents( $WPT_PREPARE_DIR . '/junit.xml' );
 $results = process_junit_xml( $xml );
 
-$meta = array(
-	'php_version' => phpversion(),
-	'wp_version' => get_wordpress_version( $WPT_PREPARE_DIR ),
-);
+$meta = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
 
 $success = upload( $results, $rev, $meta, $WPT_REPORT_API_KEY );
 
 if ( $success ) {
 	log_message( 'Results successfully uploaded' );
 } else {
-	log_message( 'Error uploading results' );
+	error_message( 'Error uploading results' );
 }
 
 function upload( $content, $rev, $meta, $api_key ) {
 	$data = array(
 		'results' => $content,
 		'commit' => $rev,
-		'meta' => json_encode( $meta ),
+		'meta' => $meta,
 	);
 
 	$access_token = base64_encode( $api_key );

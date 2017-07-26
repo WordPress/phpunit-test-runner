@@ -76,22 +76,6 @@ function trailingslashit( $string ) {
 }
 
 /**
- * Get WordPress version from a directory.
- *
- * @param  string $dir Path
- * @return string
- */
-function get_wordpress_version( $dir ) {
-	$wpVersion = file_get_contents( trailingslashit( $dir ) . 'src/wp-includes/version.php' );
-	// https://regex101.com/r/6kS4BH/1
-	$re = '/\$wp_version\s*=\s*[\'"](.*)[\'"]/';
-
-	preg_match( $re, $wpVersion, $matches );
-
-	return isset( $matches[1] ) ? $matches[1] : '';
-}
-
-/**
  * Process JUnit test results and return JSON. The resulting JSON will only
  * include failures.
  *
