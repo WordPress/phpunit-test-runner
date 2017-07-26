@@ -5,7 +5,6 @@
  */
 
 require __DIR__ . '/functions.php';
-require __DIR__ . '/vendor/autoload.php';
 
 // Check required environment variables
 check_required_env();
@@ -38,33 +37,10 @@ $results = process_junit_xml( $xml );
 
 $meta = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
 
-$success = upload( $results, $rev, $meta, $WPT_REPORT_API_KEY );
+$success = upload_results( $results, $rev, $meta, $WPT_REPORT_API_KEY );
 
-if ( $success ) {
+if ( $success['success'] ) {
 	log_message( 'Results successfully uploaded' );
 } else {
 	error_message( 'Error uploading results' );
-}
-
-function upload( $content, $rev, $meta, $api_key ) {
-	$data = array(
-		'results' => $content,
-		'commit' => $rev,
-		'meta' => $meta,
-	);
-
-	$access_token = base64_encode( $api_key );
-	$config = new \octalmage\WPUnitTestApi\Configuration();
-	$config->addDefaultHeader('Authorization', "Basic $access_token");
-	$client = new \octalmage\WPUnitTestApi\ApiClient( $config );
-	$api_instance = new octalmage\WPUnitTestApi\Api\DefaultApi( $client );
-	$results = new octalmage\WPUnitTestApi\Model\NewResult( $data );
-
-	try {
-		$result = $api_instance->addResults( $results );
-		return $result->getSuccess();
-	} catch (Exception $e) {
-		echo 'Exception when calling DefaultApi->addResults: ', $e->getMessage(), PHP_EOL;
-		return false;
-	}
 }

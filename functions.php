@@ -116,3 +116,39 @@ function process_junit_xml( $xml_string )
 
 	return json_encode( $results );
 }
+
+/**
+ * Upload the results to the reporting API.
+ *
+ * @param  string $content The processed JUnit XML.
+ * @param  string $rev     The SVN revision.
+ * @param  string $meta    The metadata in JSON format.
+ * @param  string $api_key The API key for the reporting API.
+ * @return array           Response from the reporting API.
+ */
+function upload_results( $results, $rev, $meta, $api_key ) {
+	$process = curl_init( 'https://wpunittestapi.wpengine.com/wp-json/wp-unit-test-api/v1/results' );
+	$access_token = base64_encode( $api_key );
+	$data = array(
+		'results' => $results,
+		'commit' => $rev,
+		'meta' => $meta,
+	);
+	$data_string = json_encode( $data );
+
+	curl_setopt( $process, CURLOPT_TIMEOUT, 30 );
+	curl_setopt( $process, CURLOPT_POST, 1 );
+	curl_setopt( $process, CURLOPT_CUSTOMREQUEST, 'POST' );
+	curl_setopt( $process, CURLOPT_POSTFIELDS, $data_string );
+	curl_setopt( $process, CURLOPT_RETURNTRANSFER, true );
+	curl_setopt( $process, CURLOPT_HTTPHEADER, array(
+		"Authorization: Basic $access_token",
+		'Content-Type: application/json',
+		'Content-Length: ' . strlen( $data_string )
+	));
+
+	$return = curl_exec( $process );
+	curl_close( $process );
+
+	return json_decode( $return, true );
+}
