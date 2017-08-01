@@ -49,6 +49,9 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'php_version'    => phpversion(),
 	'php_modules'    => array(),
 	'system_utils'   => array(),
+	'mysql_version'  => shell_exec( 'mysql --version' ),
+	'os_name'        => shell_exec( 'uname -s' ),
+	'os_version'     => shell_exec( 'uname -r' ),
 );
 \$php_modules = array(
 	'imagick',
