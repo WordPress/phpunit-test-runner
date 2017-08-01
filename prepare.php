@@ -49,9 +49,9 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'php_version'    => phpversion(),
 	'php_modules'    => array(),
 	'system_utils'   => array(),
-	'mysql_version'  => shell_exec( 'mysql --version' ),
-	'os_name'        => shell_exec( 'uname -s' ),
-	'os_version'     => shell_exec( 'uname -r' ),
+	'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
+	'os_name'        => trim( shell_exec( 'uname -s' ) ),
+	'os_version'     => trim( shell_exec( 'uname -r' ) ),
 );
 \$php_modules = array(
 	'imagick',
@@ -67,7 +67,7 @@ foreach( \$php_modules as \$php_module ) {
 \$ret = shell_exec( 'convert --version' );
 preg_match( '#Version: ImageMagick ([^\s]+)#', \$ret, \$matches );
 \$env['system_utils']['imagemagick'] = isset( \$matches[1] ) ? \$matches[1] : false;
-\$env['system_utils']['ghostscript'] = shell_exec( 'gs --version' );
+\$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 EOT;
 $logger_replace_string = '// wordpress/wp-config.php will be ignored.' . PHP_EOL;
