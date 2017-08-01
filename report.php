@@ -18,6 +18,9 @@ $WPT_REPORT_API_KEY = getenv( 'WPT_REPORT_API_KEY' );
 log_message('Getting SVN Revision');
 $rev = exec('git -C ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
 
+log_message('Getting SVN message');
+$message = trim( exec('git -C ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' log -1 --pretty=%B | head -1') );
+
 log_message('Copying junit.xml results');
 $junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
 
@@ -37,7 +40,7 @@ $results = process_junit_xml( $xml );
 
 $meta = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
 
-$success = upload_results( $results, $rev, $meta, $WPT_REPORT_API_KEY );
+$success = upload_results( $results, $rev, $message, $meta, $WPT_REPORT_API_KEY );
 
 if ( $success['success'] ) {
 	log_message( 'Results successfully uploaded' );
