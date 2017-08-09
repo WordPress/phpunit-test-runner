@@ -40,10 +40,16 @@ $results = process_junit_xml( $xml );
 
 $meta = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
 
-$success = upload_results( $results, $rev, $message, $meta, $WPT_REPORT_API_KEY );
+list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $meta, $WPT_REPORT_API_KEY );
 
-if ( $success['success'] ) {
-	log_message( 'Results successfully uploaded' );
+$response = json_decode( $response_body, true );
+if ( 20 == substr( $http_status, 0, 2 ) ) {
+	$message = 'Results successfully uploaded';
+	$message .= isset( $response['link'] ) ? ': ' . $response['link'] : '';
+	log_message( $message );
 } else {
-	error_message( 'Error uploading results' );
+	$message = 'Error uploading results';
+	$message .= isset( $response['message'] ) ? ': ' . $response['message'] : '';
+	$message .= ' (HTTP status ' . (int) $http_status . ')';
+	error_message( $message );
 }
