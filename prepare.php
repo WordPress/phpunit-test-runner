@@ -54,20 +54,31 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'os_version'     => trim( shell_exec( 'uname -r' ) ),
 );
 \$php_modules = array(
-	'imagick',
-	'filter',
-	'xml',
-	'pcre',
-	'mod_xml',
 	'bcmath',
+	'curl',
+	'filter',
+	'gd',
+	'libsodium',
+	'mcrypt',
+	'mod_xml',
+	'mysqli',
+	'imagick',
+	'pcre',
+	'xml',
+	'xmlreader',
+	'zlib',
 );
 foreach( \$php_modules as \$php_module ) {
 	\$env['php_modules'][ \$php_module ] = phpversion( \$php_module );
 }
+\$curl_bits = explode( PHP_EOL, str_replace( 'curl ', '', shell_exec( 'curl --version' ) ) );
+\$curl = array_shift( \$curl_bits );
+\$env['system_utils']['curl'] = trim( \$curl );
+\$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
 \$ret = shell_exec( 'convert --version' );
 preg_match( '#Version: ImageMagick ([^\s]+)#', \$ret, \$matches );
 \$env['system_utils']['imagemagick'] = isset( \$matches[1] ) ? \$matches[1] : false;
-\$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
+\$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 EOT;
 $logger_replace_string = '// wordpress/wp-config.php will be ignored.' . PHP_EOL;
