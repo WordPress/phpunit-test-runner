@@ -150,7 +150,8 @@ function upload_results( $results, $rev, $message, $meta, $api_key ) {
 	));
 
 	$return = curl_exec( $process );
+	$status_code = curl_getinfo( $process, CURLINFO_HTTP_CODE );
 	curl_close( $process );
 
-	return json_decode( $return, true );
+	return array( $status_code, $return );
 }
