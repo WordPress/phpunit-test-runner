@@ -1,4 +1,4 @@
-# WP-Unit-Test-Runner
+# phpunit-test-runner
 
 Thanks for running the WordPress PHPUnit test suite on your infrastructure. We appreciate you helping to ensure WordPress’ compatibility for your users.
 
