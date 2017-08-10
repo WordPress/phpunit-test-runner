@@ -93,6 +93,7 @@ function process_junit_xml( $xml_string )
 		'tests' => (string) $project['tests'],
 		'failures' => (string) $project['failures'],
 		'errors' => (string) $project['errors'],
+		'time' => (string) $project['time'],
 	);
 
 	$results['testsuites'] = array();
