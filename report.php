@@ -38,9 +38,9 @@ log_message( 'Processing and uploading junit.xml' );
 $xml = file_get_contents( $WPT_PREPARE_DIR . '/junit.xml' );
 $results = process_junit_xml( $xml );
 
-$meta = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
+$env = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
 
-list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $meta, $WPT_REPORT_API_KEY );
+list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $env, $WPT_REPORT_API_KEY );
 
 $response = json_decode( $response_body, true );
 if ( 20 == substr( $http_status, 0, 2 ) ) {

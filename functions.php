@@ -129,18 +129,18 @@ function process_junit_xml( $xml_string )
  * @param  string $content The processed JUnit XML.
  * @param  string $rev     The SVN revision.
  * @param  string $message The SVN message.
- * @param  string $meta    The metadata in JSON format.
+ * @param  string $env     The environment data in JSON format
  * @param  string $api_key The API key for the reporting API.
  * @return array           Response from the reporting API.
  */
-function upload_results( $results, $rev, $message, $meta, $api_key ) {
+function upload_results( $results, $rev, $message, $env, $api_key ) {
 	$process = curl_init( 'https://wpunittestapi.wpengine.com/wp-json/wp-unit-test-api/v1/results' );
 	$access_token = base64_encode( $api_key );
 	$data = array(
 		'results' => $results,
 		'commit' => $rev,
 		'message' => $message,
-		'meta' => $meta,
+		'env' => $env,
 	);
 	$data_string = json_encode( $data );
 
