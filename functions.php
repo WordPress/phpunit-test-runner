@@ -97,6 +97,8 @@ function process_junit_xml( $xml_string )
 
 	$results['testsuites'] = array();
 	foreach ( $project->testsuite as $testsuite ) {
+		// Handle nested testsuites like tests with data providers.
+		$testsuite = isset( $testsuite->testsuite ) ? $testsuite->testsuite : $testsuite;
 		$results['testsuites'][ (string) $testsuite['name'] ] = array(
 			'name' => (string) $testsuite['name'],
 			'tests' => (string) $testsuite['tests'],
@@ -105,11 +107,14 @@ function process_junit_xml( $xml_string )
 		);
 		$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = array();
 		foreach ( $testsuite->testcase as $testcase ) {
-			if ( isset( $testcase->failure ) ) {
-				$results['testsuites'][ (string) $testsuite['name'] ]['testcases'][ (string) $testcase['name'] ] = array(
-					'name' => (string) $testcase['name'],
-					'failure' => (string) $testcase->failure,
-				);
+			// Capture both failure and error children.
+			foreach ( array( 'failure', 'error') as $key ) {
+				if ( isset( $testcase->{$key} ) ) {
+					$results['testsuites'][ (string) $testsuite['name'] ]['testcases'][ (string) $testcase['name'] ] = array(
+						'name' => (string) $testcase['name'],
+						$key => (string) $testcase->{$key},
+					);
+				}
 			}
 		}
 	}
