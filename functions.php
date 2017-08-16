@@ -134,7 +134,11 @@ function process_junit_xml( $xml_string )
  * @return array           Response from the reporting API.
  */
 function upload_results( $results, $rev, $message, $env, $api_key ) {
-	$process = curl_init( 'https://wpunittestapi.wpengine.com/wp-json/wp-unit-test-api/v1/results' );
+	$WPT_REPORT_URL = getenv( 'WPT_REPORT_URL' );
+	if ( ! $WPT_REPORT_URL ) {
+		$WPT_REPORT_URL = 'https://make.wordpress.org/hosting/wp-json/wp-unit-test-api/v1/results';
+	}
+	$process = curl_init( $WPT_REPORT_URL );
 	$access_token = base64_encode( $api_key );
 	$data = array(
 		'results' => $results,
