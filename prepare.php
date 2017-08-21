@@ -17,7 +17,7 @@ $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 
 // Set the ssh private key if it's set
 $WPT_SSH_PRIVATE_KEY_BASE64 = getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' );
-if ( false !== $WPT_SSH_PRIVATE_KEY_BASE64 ) {
+if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 	log_message( 'Securely extracting WPT_SSH_PRIVATE_KEY_BASE64 into ~/.ssh/id_rsa' );
 	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $WPT_SSH_PRIVATE_KEY_BASE64 ) );
 	perform_operations( array(
@@ -95,7 +95,7 @@ $contents = str_replace( array_keys( $search_replace ), array_values( $search_re
 file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
 
 // Deliver all files to test environment
-if ( false !== $WPT_SSH_CONNECT ) {
+if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	perform_operations( array(
 		'rsync -rv --exclude=".git/" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
 	) );

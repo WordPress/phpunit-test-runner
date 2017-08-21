@@ -24,7 +24,7 @@ perform_operations( array(
 ) );
 
 // Clean up the test directory in remote environments
-if ( false !== $WPT_SSH_CONNECT ) {
+if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	perform_operations( array(
 		'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
 	) );

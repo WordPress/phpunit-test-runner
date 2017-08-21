@@ -24,7 +24,7 @@ $message = trim( exec('git -C ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' log -1 
 log_message('Copying junit.xml results');
 $junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
 
-if ( false !== $WPT_SSH_CONNECT ) {
+if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
 }
 

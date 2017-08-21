@@ -23,7 +23,7 @@ function check_required_env() {
 		}
 	}
 
-	if ( false === getenv( 'WPT_SSH_CONNECT' )
+	if ( empty( getenv( 'WPT_SSH_CONNECT' ) )
 		&& getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
 		error_message( 'WPT_TEST_DIR must be the same as WPT_PREPARE_DIR when running locally.' );
 	}
