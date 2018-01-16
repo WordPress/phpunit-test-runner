@@ -7,7 +7,7 @@
 require __DIR__ . '/functions.php';
 
 // Check required environment variables
-check_required_env();
+check_required_env( false );
 
 $WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );

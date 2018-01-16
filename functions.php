@@ -7,7 +7,7 @@
 /**
  * Check for required environment variables.
  */
-function check_required_env() {
+function check_required_env( $check_db = true ) {
 
 	$required = array(
 		'WPT_PREPARE_DIR',
@@ -18,6 +18,9 @@ function check_required_env() {
 		'WPT_DB_HOST',
 	);
 	foreach( $required as $var ) {
+		if ( ! $check_db && 0 === strpos( $var, 'WPT_DB_' ) ) {
+			continue;
+		}
 		if ( false === getenv( $var ) ) {
 			error_message( $var . ' must be set as an environment variable.' );
 		}
