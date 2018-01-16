@@ -168,3 +168,44 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 
 	return array( $status_code, $return );
 }
+
+/**
+ * Get the environmental details
+ */
+function get_env_details() {
+	$env = array(
+		'php_version'    => phpversion(),
+		'php_modules'    => array(),
+		'system_utils'   => array(),
+		'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
+		'os_name'        => trim( shell_exec( 'uname -s' ) ),
+		'os_version'     => trim( shell_exec( 'uname -r' ) ),
+	);
+	$php_modules = array(
+		'bcmath',
+		'curl',
+		'filter',
+		'gd',
+		'libsodium',
+		'mcrypt',
+		'mod_xml',
+		'mysqli',
+		'imagick',
+		'pcre',
+		'xml',
+		'xmlreader',
+		'zlib',
+	);
+	foreach( $php_modules as $php_module ) {
+		$env['php_modules'][ $php_module ] = phpversion( $php_module );
+	}
+	$curl_bits = explode( PHP_EOL, str_replace( 'curl ', '', shell_exec( 'curl --version' ) ) );
+	$curl = array_shift( $curl_bits );
+	$env['system_utils']['curl'] = trim( $curl );
+	$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
+	$ret = shell_exec( 'convert --version' );
+	preg_match( '#Version: ImageMagick ([^\s]+)#', $ret, $matches );
+	$env['system_utils']['imagemagick'] = isset( $matches[1] ) ? $matches[1] : false;
+	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
+	return $env;
+}
