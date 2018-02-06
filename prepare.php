@@ -80,6 +80,11 @@ preg_match( '#Version: ImageMagick ([^\s]+)#', \$ret, \$matches );
 \$env['system_utils']['imagemagick'] = isset( \$matches[1] ) ? \$matches[1] : false;
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
+if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
+	echo PHP_EOL;
+	echo 'PHP version: ' . phpversion() . ' (' . realpath( \$_SERVER['_'] ) . ')' . PHP_EOL;
+	echo PHP_EOL;
+}
 EOT;
 $logger_replace_string = '// wordpress/wp-config.php will be ignored.' . PHP_EOL;
 $system_logger = $logger_replace_string . $system_logger;
