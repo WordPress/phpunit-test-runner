@@ -87,6 +87,10 @@ function trailingslashit( $string ) {
  */
 function process_junit_xml( $xml_string )
 {
+	if ( empty( $xml_string ) ) {
+		return '';
+	}
+
 	$xml = simplexml_load_string( $xml_string );
 	$xml_string = null;
 	$project = $xml->testsuite;
