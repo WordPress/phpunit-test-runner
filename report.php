@@ -16,10 +16,10 @@ $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' );
 $WPT_REPORT_API_KEY = getenv( 'WPT_REPORT_API_KEY' );
 
 log_message('Getting SVN Revision');
-$rev = exec('git -C ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
+$rev = exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
 
 log_message('Getting SVN message');
-$message = trim( exec('git -C ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' log -1 --pretty=%B | head -1') );
+$message = trim( exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | head -1') );
 
 log_message('Copying junit.xml results');
 $junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
