@@ -68,7 +68,7 @@ Both the prep and test environments must meet some basic requirements.
 Prep environment:
 
 * PHP 5.6 or greater (to run scripts).
-* Utilities: `git`, `rsync`, `wget`, `unzip`.
+* Utilities: `git` version 1.8.5 or greater, `rsync`, `wget`, `unzip`.
 * Node.js including `npm` and `grunt` packages
 
 Test environment:
