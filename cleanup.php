@@ -20,6 +20,7 @@ $WPT_RM_TEST_DIR_CMD = getenv( 'WPT_RM_TEST_DIR_CMD' ) ? : 'rm -r ' . $WPT_TEST_
 // Only forcefully delete the .git directory, to prevent disasters otherwise
 perform_operations( array(
 	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/.git' ),
+	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/node_modules/.cache' ),
 	'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR ),
 ) );
 
