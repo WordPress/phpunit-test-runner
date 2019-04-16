@@ -75,7 +75,8 @@ Test environment:
 
 * PHP 5.6 or greater with Phar support enabled (for PHPUnit).
 * MySQL or MariaDB with access to a writable database.
-* Writable filesystem for the entire test directory (see [#40910](https://core.trac.wordpress.org/ticket/40910) for details on why).
+* Writable filesystem for the entire test directory (see [#40910](https://core.trac.wordpress.org/ticket/40910)).
+* Run with a non-root user, both for security and practical purposes (see [#44233](https://core.trac.wordpress.org/ticket/44233#comment:34)/[#46577](https://core.trac.wordpress.org/ticket/46577)).
 
 ### 1. Prepare
 
