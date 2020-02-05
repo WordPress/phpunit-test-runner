@@ -97,10 +97,10 @@ function process_junit_xml( $xml_string )
 	$results = array();
 
 	$results = array(
-		'tests' => (string) $project['tests'],
+		'tests'    => (string) $project['tests'],
 		'failures' => (string) $project['failures'],
-		'errors' => (string) $project['errors'],
-		'time' => (string) $project['time'],
+		'errors'   => (string) $project['errors'],
+		'time'     => (string) $project['time'],
 	);
 
 	$results['testsuites'] = array();
@@ -108,10 +108,10 @@ function process_junit_xml( $xml_string )
 		// Handle nested testsuites like tests with data providers.
 		$testsuite = isset( $testsuite->testsuite ) ? $testsuite->testsuite : $testsuite;
 		$result = array(
-			'name' => (string) $testsuite['name'],
-			'tests' => (string) $testsuite['tests'],
+			'name'     => (string) $testsuite['name'],
+			'tests'    => (string) $testsuite['tests'],
 			'failures' => (string) $testsuite['failures'],
-			'errors' => (string) $testsuite['errors']
+			'errors'   => (string) $testsuite['errors']
 		);
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue;
@@ -124,7 +124,7 @@ function process_junit_xml( $xml_string )
 				if ( isset( $testcase->{$key} ) ) {
 					$results['testsuites'][ (string) $testsuite['name'] ]['testcases'][ (string) $testcase['name'] ] = array(
 						'name' => (string) $testcase['name'],
-						$key => (string) $testcase->{$key},
+						$key   => (string) $testcase->{$key},
 					);
 				}
 			}
@@ -153,9 +153,9 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 	$access_token = base64_encode( $api_key );
 	$data = array(
 		'results' => $results,
-		'commit' => $rev,
+		'commit'  => $rev,
 		'message' => $message,
-		'env' => $env,
+		'env'     => $env,
 	);
 	$data_string = json_encode( $data );
 
