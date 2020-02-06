@@ -6,17 +6,17 @@
 
 require __DIR__ . '/functions.php';
 
-// Check required environment variables
+// Check required environment variables.
 check_required_env();
 
-// Bring some environment variables into scope
+// Bring some environment variables into scope.
 $WPT_PREPARE_DIR = getenv( 'WPT_PREPARE_DIR' );
 $WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
 $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no';
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 $WPT_PHP_EXECUTABLE = getenv( 'WPT_PHP_EXECUTABLE') ? : 'php';
 
-// Set the ssh private key if it's set
+// Set the ssh private key if it's set.
 $WPT_SSH_PRIVATE_KEY_BASE64 = getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' );
 if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 	log_message( 'Securely extracting WPT_SSH_PRIVATE_KEY_BASE64 into ~/.ssh/id_rsa' );
@@ -27,7 +27,7 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 	) );
 }
 
-// Create the prepation directory and fetch corresponding files
+// Create the preparation directory and fetch corresponding files
 perform_operations( array(
 	'mkdir -p ' . escapeshellarg( $WPT_PREPARE_DIR ),
 	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
@@ -37,10 +37,10 @@ perform_operations( array(
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && grunt build',
 ) );
 
-// Replace variables in the wp-config.php file
+// Replace variables in the wp-config.php file.
 log_message( 'Replacing variables in wp-tests-config.php' );
 $contents = file_get_contents( $WPT_PREPARE_DIR . '/wp-tests-config-sample.php' );
-// Log system information to same directory as test run log
+// Log system information to same directory as test run log.
 $system_logger = <<<EOT
 // Create the log directory to store test results
 if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
@@ -103,7 +103,7 @@ $search_replace = array(
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
 file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
 
-// Deliver all files to test environment
+// Deliver all files to test environment.
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	perform_operations( array(
 		'rsync -rv --exclude=".git/" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
