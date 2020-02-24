@@ -15,7 +15,7 @@ $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no'
 $WPT_PHP_EXECUTABLE = getenv( 'WPT_PHP_EXECUTABLE' ) ? : 'php';
 $WPT_PHPUNIT_CMD = getenv( 'WPT_PHPUNIT_CMD' ) ? : 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . '; ' . $WPT_PHP_EXECUTABLE . ' phpunit.phar';
 
-// Run phpunit in the test environment.
+// Run PHPUnit in the test environment.
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	$WPT_PHPUNIT_CMD = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_PHPUNIT_CMD );
 }

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Reports the test run results to WordPress.org
+ * Reports the test run results to WordPress.org.
  */
 
 require __DIR__ . '/functions.php';

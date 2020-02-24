@@ -35,7 +35,7 @@ function check_required_env( $check_db = true ) {
 }
 
 /**
- * Perform some number of shell operations
+ * Perform some number of shell operations.
  *
  * @param array $operations
  */
@@ -50,7 +50,7 @@ function perform_operations( $operations ) {
 }
 
 /**
- * Log a message to STDOUT
+ * Log a message to STDOUT.
  *
  * @param string $message
  */
@@ -59,7 +59,7 @@ function log_message( $message ) {
 }
 
 /**
- * Log an error message to STDERR
+ * Log an error message to STDERR.
  *
  * @param string $message
  */
@@ -69,7 +69,7 @@ function error_message( $message ) {
 }
 
 /**
- * Add a trailing slash to the string
+ * Add a trailing slash to the string.
  *
  * @param string
  * @return string
@@ -79,8 +79,8 @@ function trailingslashit( $string ) {
 }
 
 /**
- * Process JUnit test results and return JSON. The resulting JSON will only
- * include failures.
+ * Process JUnit test results and return JSON.
+ * The resulting JSON will only include failures.
  *
  * @param  string $xml String containing JUnit results.
  * @return string
@@ -178,7 +178,7 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 }
 
 /**
- * Get the environmental details
+ * Get the environmental details.
  */
 function get_env_details() {
 	$env = array(

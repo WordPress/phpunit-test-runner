@@ -1,6 +1,6 @@
 # phpunit-test-runner
 
-Thanks for running the WordPress PHPUnit test suite on your infrastructure. We appreciate you helping to ensure WordPress’ compatibility for your users.
+Thanks for running the WordPress PHPUnit test suite on your infrastructure. We appreciate you helping to ensure WordPress’s compatibility for your users.
 
 If you haven't already, [please first read through the "Getting Started" documentation](https://make.wordpress.org/hosting/test-results-getting-started/).
 
@@ -40,14 +40,14 @@ Concurrently run tests in the same environment by appending build ids to the tes
 
 Connect to a remote environment over SSH by having the CI job provision the SSH key:
 
-    # 1. Create a SSH key pair for the controller to use
+    # 1. Create an SSH key pair for the controller to use
     ssh-keygen -t rsa -b 4096 -C "travis@travis-ci.org"
     # 2. base64 encode the private key for use with the environment variable
     cat ~/.ssh/id_rsa | base64 --wrap=0
     # 3. Append id_rsa.pub to authorized_keys so the CI service can SSH in
     cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
-Use a more complex SSH connection process by creating a SSH alias:
+Use a more complex SSH connection process by creating an SSH alias:
 
     # 1. Add the following to ~/.ssh/config to create a 'wpt' alias
     Host wpt

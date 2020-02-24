@@ -27,7 +27,7 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 	) );
 }
 
-// Create the preparation directory and fetch corresponding files
+// Create the preparation directory and fetch corresponding files.
 perform_operations( array(
 	'mkdir -p ' . escapeshellarg( $WPT_PREPARE_DIR ),
 	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
