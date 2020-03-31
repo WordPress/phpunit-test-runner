@@ -104,7 +104,9 @@ function process_junit_xml( $xml_string )
 	);
 
 	$results['testsuites'] = array();
-	foreach ( $project->testsuite as $testsuite ) {
+
+	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( @file ) and ( @errors > 0 or @failures > 0 ) ]' );
+	foreach ( $testsuites as $testsuite ) {
 		// Handle nested testsuites like tests with data providers.
 		$testsuite = isset( $testsuite->testsuite ) ? $testsuite->testsuite : $testsuite;
 		$result = array(
