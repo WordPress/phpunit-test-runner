@@ -105,10 +105,8 @@ function process_junit_xml( $xml_string )
 
 	$results['testsuites'] = array();
 
-	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( @file ) and ( @errors > 0 or @failures > 0 ) ]' );
+	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( count( testcase ) > 0 ) and ( @errors > 0 or @failures > 0 ) ]' );
 	foreach ( $testsuites as $testsuite ) {
-		// Handle nested testsuites like tests with data providers.
-		$testsuite = isset( $testsuite->testsuite ) ? $testsuite->testsuite : $testsuite;
 		$result = array(
 			'name'     => (string) $testsuite['name'],
 			'tests'    => (string) $testsuite['tests'],
@@ -118,18 +116,21 @@ function process_junit_xml( $xml_string )
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue;
 		}
-		$results['testsuites'][ (string) $testsuite['name'] ] = $result;
-		$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = array();
+		$failures = array();
 		foreach ( $testsuite->testcase as $testcase ) {
 			// Capture both failure and error children.
 			foreach ( array( 'failure', 'error') as $key ) {
 				if ( isset( $testcase->{$key} ) ) {
-					$results['testsuites'][ (string) $testsuite['name'] ]['testcases'][ (string) $testcase['name'] ] = array(
+					$failures[ (string) $testcase['name'] ] = array(
 						'name' => (string) $testcase['name'],
 						$key   => (string) $testcase->{$key},
 					);
 				}
 			}
+		}
+		if ( $failures ) {
+			$results['testsuites'][ (string) $testsuite['name'] ] = $result;
+			$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = $failures;
 		}
 	}
 
