@@ -14,6 +14,7 @@ $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 $WPT_PREPARE_DIR = getenv( 'WPT_PREPARE_DIR' );
 $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' );
 $WPT_REPORT_API_KEY = getenv( 'WPT_REPORT_API_KEY' );
+$WPT_DEBUG = getenv( 'WPT_DEBUG' );
 
 log_message('Getting SVN Revision');
 $rev = exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
@@ -28,7 +29,13 @@ if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
 }
 
-$junit_exec = 'rsync -rv ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
+$rsync_options = '-r';
+
+if ( 'verbose' === $WPT_DEBUG ) {
+	$rsync_options = $rsync_options . 'v';
+}
+
+$junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
 perform_operations( array(
 	$junit_exec,
 ) );
