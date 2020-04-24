@@ -15,7 +15,7 @@ $WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
 $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no';
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 $WPT_PHP_EXECUTABLE = getenv( 'WPT_PHP_EXECUTABLE' ) ? : 'php';
-$WPT_DEBUG = getenv( 'WPT_DEBUG' ) ? : '';
+$WPT_DEBUG = getenv( 'WPT_DEBUG' );
 
 // Set the ssh private key if it's set.
 $WPT_SSH_PRIVATE_KEY_BASE64 = getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' );

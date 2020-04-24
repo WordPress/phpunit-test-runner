@@ -14,7 +14,7 @@ $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 $WPT_PREPARE_DIR = getenv( 'WPT_PREPARE_DIR' );
 $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' );
 $WPT_REPORT_API_KEY = getenv( 'WPT_REPORT_API_KEY' );
-$WPT_DEBUG = getenv( 'WPT_DEBUG' ) ? : '';
+$WPT_DEBUG = getenv( 'WPT_DEBUG' );
 
 log_message('Getting SVN Revision');
 $rev = exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
