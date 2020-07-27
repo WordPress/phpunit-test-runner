@@ -1,4 +1,6 @@
 language: php
+node_js:
+  - node
 
 install:
   - php prepare.php
