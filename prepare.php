@@ -113,7 +113,7 @@ if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	}
 
 	perform_operations( array(
-		'rsync ' . $rsync_options . ' --exclude=".git/" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
+		'rsync ' . $rsync_options . ' --exclude=".git/" --exclude="node_modules/" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
 	) );
 }
 
