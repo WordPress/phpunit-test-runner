@@ -1,9 +1,5 @@
 language: php
 
-branches:
-  only:
-    - master
-
 install:
   - php prepare.php
 
