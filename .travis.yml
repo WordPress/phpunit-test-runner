@@ -1,10 +1,9 @@
-sudo: false
-
 language: php
+node_js:
+  - node
 
-branches:
-  only:
-    - master
+before_install:
+  - npm install -g npm@latest
 
 install:
   - php prepare.php
