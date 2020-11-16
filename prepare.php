@@ -32,7 +32,6 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 perform_operations( array(
 	'mkdir -p ' . escapeshellarg( $WPT_PREPARE_DIR ),
 	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
-	'wget -O ' .  escapeshellarg( $WPT_PREPARE_DIR . '/phpunit.phar' ) . ' https://phar.phpunit.de/phpunit-5.7.phar',
 	'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip',
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build',
@@ -103,6 +102,30 @@ $search_replace = array(
 );
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
 file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
+
+// Now, install PHPUnit based on the environment (local or remote) PHP Version
+
+// TODO: Install Composer
+$php_version_cmd = $WPT_PHP_EXECUTABLE . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
+$composer_cmd    = 'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && composer ';
+
+if ( ! empty( $WPT_SSH_CONNECT ) ) {
+	$php_version_cmd = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $php_version_cmd );
+}
+$env_php_version = exec( $php_version_cmd, $output, $retval );
+log_message("Environment PHP Version: $env_php_version");
+
+// Set Composer PHP environment, then run Composer.
+if ( $retval === 0 ) {
+	perform_operations( array(
+		$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
+		$composer_cmd . 'install',
+	) );
+
+} else {
+	log_message( 'Could not retrieve the environment PHP Version.' );
+	exit( 1 );
+}
 
 // Deliver all files to test environment.
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
