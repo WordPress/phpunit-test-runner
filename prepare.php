@@ -113,7 +113,7 @@ if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	$php_version_cmd = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $php_version_cmd );
 }
 $env_php_version = exec( $php_version_cmd, $output, $retval );
-log_message("Environment PHP Version: $env_php_version");
+log_message( "Environment PHP Version: $env_php_version" );
 
 // Set Composer PHP environment, then run Composer.
 if ( $retval === 0 ) {
