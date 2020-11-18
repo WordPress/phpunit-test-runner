@@ -51,6 +51,8 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 \$env = array(
 	'php_version'    => phpversion(),
 	'php_modules'    => array(),
+	'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : 'unavailable',
+	'Imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : 'unavailable'
 	'system_utils'   => array(),
 	'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 	'os_name'        => trim( shell_exec( 'uname -s' ) ),
