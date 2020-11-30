@@ -35,7 +35,7 @@ perform_operations( array(
 	'wget -O ' .  escapeshellarg( $WPT_PREPARE_DIR . '/phpunit.phar' ) . ' https://phar.phpunit.de/phpunit-5.7.phar',
 	'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip',
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
-	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && grunt build',
+	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build',
 ) );
 
 // Replace variables in the wp-config.php file.
