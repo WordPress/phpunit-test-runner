@@ -122,6 +122,10 @@ if ( substr( $env_php_version, 0 , 2 ) === '8.' ) {
 	$env_php_version = '7.4';
 }
 
+if ( version_compare( $env_php_version, '5.6', '<' ) ) {
+	error_message( "The test runner is not compatible with PHP < 5.6." );
+}
+
 // If PHP version is 5.6-7.0, download PHPUnit 5.7 phar directly.
 if ( version_compare( $env_php_version, '7.1', '<' ) ) {
 	perform_operations( array(
