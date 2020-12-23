@@ -187,8 +187,8 @@ function get_env_details() {
 	$env = array(
 		'php_version'    => phpversion(),
 		'php_modules'    => array(),
-		'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : 'unavailable',
-		'imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : 'unavailable',
+		'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : array(),
+		'imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : array(),
 		'system_utils'   => array(),
 		'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 		'os_name'        => trim( shell_exec( 'uname -s' ) ),
