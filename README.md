@@ -1,6 +1,6 @@
 # phpunit-test-runner
 
-Thanks for running the WordPress PHPUnit test suite on your infrastructure. We appreciate you helping to ensure WordPress’ compatibility for your users.
+Thanks for running the WordPress PHPUnit test suite on your infrastructure. We appreciate you helping to ensure WordPress’s compatibility for your users.
 
 If you haven't already, [please first read through the "Getting Started" documentation](https://make.wordpress.org/hosting/test-results-getting-started/).
 

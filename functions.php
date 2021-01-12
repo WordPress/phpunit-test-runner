@@ -97,37 +97,40 @@ function process_junit_xml( $xml_string )
 	$results = array();
 
 	$results = array(
-		'tests' => (string) $project['tests'],
+		'tests'    => (string) $project['tests'],
 		'failures' => (string) $project['failures'],
-		'errors' => (string) $project['errors'],
-		'time' => (string) $project['time'],
+		'errors'   => (string) $project['errors'],
+		'time'     => (string) $project['time'],
 	);
 
 	$results['testsuites'] = array();
-	foreach ( $project->testsuite as $testsuite ) {
-		// Handle nested testsuites like tests with data providers.
-		$testsuite = isset( $testsuite->testsuite ) ? $testsuite->testsuite : $testsuite;
+
+	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( count( testcase ) > 0 ) and ( @errors > 0 or @failures > 0 ) ]' );
+	foreach ( $testsuites as $testsuite ) {
 		$result = array(
-			'name' => (string) $testsuite['name'],
-			'tests' => (string) $testsuite['tests'],
+			'name'     => (string) $testsuite['name'],
+			'tests'    => (string) $testsuite['tests'],
 			'failures' => (string) $testsuite['failures'],
-			'errors' => (string) $testsuite['errors']
+			'errors'   => (string) $testsuite['errors']
 		);
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue;
 		}
-		$results['testsuites'][ (string) $testsuite['name'] ] = $result;
-		$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = array();
+		$failures = array();
 		foreach ( $testsuite->testcase as $testcase ) {
 			// Capture both failure and error children.
 			foreach ( array( 'failure', 'error') as $key ) {
 				if ( isset( $testcase->{$key} ) ) {
-					$results['testsuites'][ (string) $testsuite['name'] ]['testcases'][ (string) $testcase['name'] ] = array(
+					$failures[ (string) $testcase['name'] ] = array(
 						'name' => (string) $testcase['name'],
-						$key => (string) $testcase->{$key},
+						$key   => (string) $testcase->{$key},
 					);
 				}
 			}
+		}
+		if ( $failures ) {
+			$results['testsuites'][ (string) $testsuite['name'] ] = $result;
+			$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = $failures;
 		}
 	}
 
@@ -153,9 +156,9 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 	$access_token = base64_encode( $api_key );
 	$data = array(
 		'results' => $results,
-		'commit' => $rev,
+		'commit'  => $rev,
 		'message' => $message,
-		'env' => $env,
+		'env'     => $env,
 	);
 	$data_string = json_encode( $data );
 
