@@ -220,3 +220,53 @@ function get_env_details() {
 	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 	return $env;
 }
+
+/**
+ * Cleanup the Database.
+ */
+function cleanup_db() {
+	$prefix = getenv( 'WPT_TABLE_PREFIX' ) ? getenv( 'WPT_TABLE_PREFIX' ) : 'wptests_';
+
+	$tables = array(
+		'users',
+		'usermeta',
+		'posts',
+		'comments',
+		'links',
+		'options',
+		'postmeta',
+		'terms',
+		'term_taxonomy',
+		'term_relationships',
+		'termmeta',
+		'commentmeta',
+		'blogs',
+		'blogmeta',
+		'signups',
+		'site',
+		'sitemeta',
+		'sitecategories',
+		'registration_log',
+	);
+
+	$test_db = new mysqli(
+		getenv( 'WPT_DB_HOST' ),
+		getenv( 'WPT_DB_USER' ),
+		getenv( 'WPT_DB_PASSWORD' ),
+		getenv( 'WPT_DB_NAME' )
+	);
+
+	if ( $test_db->connect_errno ) {
+		error_message( 'Could not connect to database.' );
+	}
+
+	log_message( 'Clearing database.' );
+
+	foreach ( $tables as $table ) {
+		if ( ! $test_db->query( "DROP TABLE IF EXISTS {$prefix}{$table}" ) ) {
+			error_message( "Aborting. Could not DROP table {$prefix}{$table}." );
+		}
+	}
+
+	$test_db->close();
+}

@@ -16,6 +16,9 @@ $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no'
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 $WPT_RM_TEST_DIR_CMD = getenv( 'WPT_RM_TEST_DIR_CMD' ) ? : 'rm -r ' . $WPT_TEST_DIR;
 
+// Cleanup the Database.
+cleanup_db();
+
 // Clean up the preparation directory.
 // Only forcefully delete the .git directory, to prevent disasters otherwise.
 perform_operations( array(
