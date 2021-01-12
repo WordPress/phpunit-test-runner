@@ -214,9 +214,6 @@ function get_env_details() {
 	$curl = array_shift( $curl_bits );
 	$env['system_utils']['curl'] = trim( $curl );
 	$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
-	$ret = shell_exec( 'convert --version' );
-	preg_match( '#Version: ImageMagick ([^\s]+)#', $ret, $matches );
-	$env['system_utils']['imagemagick'] = isset( $matches[1] ) ? $matches[1] : false;
 	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 	return $env;
 }
