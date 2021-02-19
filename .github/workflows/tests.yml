@@ -1,7 +1,9 @@
-name: JavaScript Tests
+name: Test
 
 on:
   push:
+    branches:
+      - master
   pull_request:
 
 jobs:
@@ -17,8 +19,8 @@ jobs:
   # - Runs the tests.
   # - Reports the results.
   # - Cleans up.
-  test-js:
-    name: QUnit Tests
+  test:
+    name: Test the runner
     runs-on: ubuntu-latest
 
     steps:
