@@ -13,7 +13,9 @@ $WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
 $WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
 $WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no';
 $WPT_PHP_EXECUTABLE = getenv( 'WPT_PHP_EXECUTABLE' ) ? : 'php';
-$WPT_PHPUNIT_CMD = getenv( 'WPT_PHPUNIT_CMD' ) ? : 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . '; ' . $WPT_PHP_EXECUTABLE . ' phpunit.phar';
+
+// This uses `||` to run PHPUnit when it is downloaded manually (like for PHP 5.6-7.0) rather than through Composer.
+$WPT_PHPUNIT_CMD = getenv( 'WPT_PHPUNIT_CMD' ) ? : 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit || ' . $WPT_PHP_EXECUTABLE . ' phpunit.phar';
 
 // Run phpunit in the test environment.
 if ( ! empty( $WPT_SSH_CONNECT ) ) {

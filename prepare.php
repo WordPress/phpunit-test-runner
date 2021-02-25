@@ -32,7 +32,6 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 perform_operations( array(
 	'mkdir -p ' . escapeshellarg( $WPT_PREPARE_DIR ),
 	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
-	'wget -O ' .  escapeshellarg( $WPT_PREPARE_DIR . '/phpunit.phar' ) . ' https://phar.phpunit.de/phpunit-5.7.phar',
 	'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip',
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build',
@@ -104,6 +103,62 @@ $search_replace = array(
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
 file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
 
+// Now, install PHPUnit based on the test environment's PHP Version
+$php_version_cmd = $WPT_PHP_EXECUTABLE . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
+if ( ! empty( $WPT_SSH_CONNECT ) ) {
+	$php_version_cmd = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $php_version_cmd );
+}
+
+$retval = 0;
+$env_php_version = exec( $php_version_cmd, $output, $retval );
+if ( $retval !== 0 ) {
+	error_message( 'Could not retrieve the environment PHP Version.' );
+}
+log_message( "Environment PHP Version: $env_php_version" );
+
+// If PHP Version is 8.X.X, set PHP Version to 7.4 for compatibility with core PHPUnit tests.
+if ( substr( $env_php_version, 0 , 2 ) === '8.' ) {
+	log_message( 'Version 8.x.x Found. Downloading PHPUnit for PHP 7.4 instead for compatibility.' );
+	$env_php_version = '7.4';
+}
+
+if ( version_compare( $env_php_version, '5.6', '<' ) ) {
+	error_message( "The test runner is not compatible with PHP < 5.6." );
+}
+
+// If PHP version is 5.6-7.0, download PHPUnit 5.7 phar directly.
+if ( version_compare( $env_php_version, '7.1', '<' ) ) {
+	perform_operations( array(
+		'wget -O ' .  escapeshellarg( $WPT_PREPARE_DIR . '/phpunit.phar' ) . ' https://phar.phpunit.de/phpunit-5.7.phar',
+	) );
+
+// Otherwise, use Composer to download PHPUnit to get further necessary dependencies.
+} else {
+
+	// First, check if composer is available. Download if not.
+	$composer_cmd = 'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && ';
+
+	$retval = 0;
+	$composer_path = escapeshellarg( system( 'which composer', $retval ) );
+	if ( $retval === 0 ) {
+		$composer_cmd .= $composer_path . ' ';
+	} else {
+		log_message( 'Local Composer not found. Downloading latest stable ...' );
+
+		perform_operations( array(
+			'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/composer.phar' ) . ' https://getcomposer.org/composer-stable.phar',
+		) );
+
+		$composer_cmd .= 'php composer.phar ';
+	}
+
+	// Set Composer PHP environment, then run Composer.
+	perform_operations( array(
+		$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
+		$composer_cmd . 'update',
+	) );
+}
+
 // Deliver all files to test environment.
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	$rsync_options = '-r';
@@ -113,7 +168,7 @@ if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	}
 
 	perform_operations( array(
-		'rsync ' . $rsync_options . ' --exclude=".git/" --exclude="node_modules/" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
+		'rsync ' . $rsync_options . ' --exclude=".git/" --exclude="node_modules/" --exclude="composer.phar" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
 	) );
 }
 
