@@ -1,0 +1,16 @@
+language: php
+node_js:
+  - node
+
+before_install:
+  - npm install -g npm@latest
+
+install:
+  - php prepare.php
+
+script:
+  - php test.php
+
+after_script:
+  - php report.php
+  - php cleanup.php
