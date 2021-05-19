@@ -81,6 +81,7 @@ jobs:
 
       - name: Run tests
         run: php test.php
+        # Prevent GitHub Action to discontinue if PHPUnit runs into errors
         continue-on-error: true
 
       - name: Report tests
