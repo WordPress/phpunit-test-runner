@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - master
+  # To run the action on a schedule, you can also add a scheduler
+  #
+  # "*"" is a special character in YAML so you have to quote this string
+  #
+  # schedule:
+  #   - cron:  '0 * * * *'
   pull_request:
 
 jobs:
