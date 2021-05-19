@@ -81,6 +81,7 @@ jobs:
 
       - name: Run tests
         run: php test.php
+        continue-on-error: true
 
       - name: Report tests
         run: php report.php
