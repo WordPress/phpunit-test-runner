@@ -65,6 +65,7 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'mod_xml',
 	'mysqli',
 	'imagick',
+	'gmagick',
 	'pcre',
 	'xml',
 	'xmlreader',
@@ -77,9 +78,17 @@ foreach( \$php_modules as \$php_module ) {
 \$curl = array_shift( \$curl_bits );
 \$env['system_utils']['curl'] = trim( \$curl );
 \$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
-\$ret = shell_exec( 'convert --version' );
-preg_match( '#Version: ImageMagick ([^\s]+)#', \$ret, \$matches );
-\$env['system_utils']['imagemagick'] = isset( \$matches[1] ) ? \$matches[1] : false;
+if ( class_exists( 'Imagick' ) ) {
+	\$imagick = new Imagick();
+	\$version = \$imagick->getVersion();
+	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$version );
+	\$env['system_utils']['imagemagick'] = \$version[1];
+} elseif ( class_exists( 'Gmagick' ) ) {
+	\$gmagick = new Gmagick();
+	\$version = \$gmagick->getversion();
+	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$version );
+	\$env['system_utils']['graphicsmagick'] = \$version[1];
+}
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {

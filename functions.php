@@ -202,6 +202,7 @@ function get_env_details() {
 		'mod_xml',
 		'mysqli',
 		'imagick',
+		'gmagick',
 		'pcre',
 		'xml',
 		'xmlreader',
@@ -214,9 +215,17 @@ function get_env_details() {
 	$curl = array_shift( $curl_bits );
 	$env['system_utils']['curl'] = trim( $curl );
 	$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
-	$ret = shell_exec( 'convert --version' );
-	preg_match( '#Version: ImageMagick ([^\s]+)#', $ret, $matches );
-	$env['system_utils']['imagemagick'] = isset( $matches[1] ) ? $matches[1] : false;
+	if ( class_exists( 'Imagick' ) ) {
+		$imagick = new Imagick();
+		$version = $imagick->getVersion();
+		preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $version );
+		$env['system_utils']['imagemagick'] = $version[1];
+	} elseif ( class_exists( 'Gmagick' ) ) {
+		$gmagick = new Gmagick();
+		$version = $gmagick->getversion();
+		preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $version );
+		$env['system_utils']['graphicsmagick'] = $version[1];
+	}
 	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 	return $env;
 }
