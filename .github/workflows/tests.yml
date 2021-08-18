@@ -1,18 +1,25 @@
-name: Test
+name: WordPress PHPUnit tests
 
 on:
-  push:
-    branches:
-      - master
-  # Workflows can be run on a schedule using the 'schedule' event trigger.
+  # The workflow should be run on a schedule using the 'schedule' event trigger.
   #
-  # The example below runs the workflow every three hours.
+  # For more details on how to configure the schedule event, see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule.
   #
-  # For more details on how to use the schedule event, see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule.
-  #
-  # schedule:
-  #   - cron:  '0 0/3 * * *'
-  pull_request:
+  # Below are some options for different schedules. Running the tests every hour is recommended,
+  # but every 3-6 hours is also helpful. Times are in UTC.
+   schedule:
+     # By default, the workflow will run every hour.
+     - cron:  '0 * * * *'
+     # Every 3 hours.
+     # - cron:  '0 0/3 * * *'
+     # Every 6 hours.
+     # - cron:  '0 0/6 * * *'
+     # Every 12 hours.
+     # - cron:  '0 0/12 * * *'
+     # Once per day at 00:00.
+     # - cron:  '0 0 * * *'
+     # Every 30 minutes.
+     # - cron:  '0/30 * * * *'
 
 # Cancels all previous workflow runs for pull requests that have not completed.
 concurrency:
@@ -67,15 +74,15 @@ jobs:
           node-version: 14
           cache: npm
 
-      - name: Prepare step
+      - name: Prepare environment
         run: php prepare.php
 
-      - name: Run tests
+      - name: Run unit tests
         run: php test.php
         # Prevent the workflow from stopping if there are test failures.
         continue-on-error: true
 
-      - name: Report tests
+      - name: Report the results
         run: php report.php
 
       - name: Cleanup
