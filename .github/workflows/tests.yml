@@ -6,12 +6,12 @@ on:
       - master
   # Workflows can be run on a schedule using the 'schedule' event trigger.
   #
-  # The example below runs the workflow every hour at minute 0.check_run:
+  # The example below runs the workflow every three hours.
   #
   # For more details on how to use the schedule event, see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule.
   #
   # schedule:
-  #   - cron:  '0 * * * *'
+  #   - cron:  '0 0/3 * * *'
   pull_request:
 
 # Cancels all previous workflow runs for pull requests that have not completed.
