@@ -33,21 +33,21 @@ jobs:
   # - Reports the results.
   # - Cleans up.
   test:
-    name: Test the runner
+    name: Run Core PHPUnit tests
     runs-on: ubuntu-latest
 
     env:
-      # This is only a subset/example of env vars, see the `.env.default` file for the full list.
+      # This is only a subset/example of env vars available. See the `.env.default` file for a full list.
       WPT_PREPARE_DIR: ${{ secrets.WPT_PREPARE_DIR }}
       WPT_TEST_DIR: ${{ secrets.WPT_TEST_DIR }}
       WPT_REPORT_API_KEY: ${{ secrets.WPT_REPORT_API_KEY }}
       WPT_PHP_EXECUTABLE: ${{ secrets.WPT_PHP_EXECUTABLE }}
-      # db settings
+      # Database settings
       WPT_DB_NAME: ${{ secrets.WPT_DB_NAME }}
       WPT_DB_USER: ${{ secrets.WPT_DB_USER }}
       WPT_DB_PASSWORD: ${{ secrets.WPT_DB_PASSWORD }}
       WPT_DB_HOST: ${{ secrets.WPT_DB_HOST }}
-      # ssh settings
+      # SSH settings for connecting to the test environment.
       WPT_SSH_CONNECT: ${{ secrets.WPT_SSH_CONNECT }}
       WPT_SSH_PRIVATE_KEY_BASE64: ${{ secrets.WPT_SSH_PRIVATE_KEY_BASE64 }}
 
