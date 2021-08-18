@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - master
-  # To run the action on a schedule, you can also add a scheduler
+  # Workflows can be run on a schedule using the 'schedule' event trigger.
   #
-  # "*"" is a special character in YAML so you have to quote this string
+  # The example below runs the workflow every hour at minute 0.check_run:
+  #
+  # For more details on how to use the schedule event, see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule.
   #
   # schedule:
   #   - cron:  '0 * * * *'
@@ -23,11 +25,9 @@ jobs:
   # Tests the PHPUnit test runner.
   #
   # Performs the following steps:
-  # - Cancels all previous workflow runs for pull requests that have not completed.
   # - Checks out the repository.
   # - Installs PHP.
-  # - Installs NodeJS 14.
-  # - Sets up caching for NPM.
+  # - Installs NodeJS 14 with caching configured.
   # - Prepares the environment for tests.
   # - Runs the tests.
   # - Reports the results.
@@ -72,7 +72,7 @@ jobs:
 
       - name: Run tests
         run: php test.php
-        # Prevent GitHub Action to discontinue if PHPUnit runs into errors
+        # Prevent the workflow from stopping if there are test failures.
         continue-on-error: true
 
       - name: Report tests
