@@ -17,7 +17,7 @@ At a high level, the test suite runner:
 
 The test suite runner can be used in one of two ways:
 
-1. With Travis (or Circle or some other CI service) as the controller that connects to the remote test environment.
+1. With GitHub Actions, (or Travis, Circle, or another CI service) as the controller that connects to the remote test environment.
 2. With the runner cloned to and run directly within the test environment.
 
 The test runner is configured through environment variables, documented in [`.env.default`](.env.default). It shouldn't need any code modifications; in fact, please refrain from editing the scripts entirely, as it will make it easier to stay up to date.

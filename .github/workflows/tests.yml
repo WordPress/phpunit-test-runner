@@ -1,0 +1,91 @@
+name: WordPress PHPUnit tests
+
+on:
+  # The workflow should be run on a schedule using the 'schedule' event trigger.
+  #
+  # For more details on how to configure the schedule event, see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onschedule.
+  #
+  # Below are some options for different schedules. Running the tests every hour is recommended,
+  # but every 3-6 hours is also helpful. Times are in UTC.
+   schedule:
+     # By default, the workflow will run every hour.
+     - cron:  '0 * * * *'
+     # Every 3 hours.
+     # - cron:  '0 0/3 * * *'
+     # Every 6 hours.
+     # - cron:  '0 0/6 * * *'
+     # Every 12 hours.
+     # - cron:  '0 0/12 * * *'
+     # Once per day at 00:00.
+     # - cron:  '0 0 * * *'
+     # Every 30 minutes.
+     # - cron:  '0/30 * * * *'
+
+# Cancels all previous workflow runs for pull requests that have not completed.
+concurrency:
+  # The concurrency group contains the workflow name and the branch name for pull requests
+  # or the commit hash for any other events.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  # Tests the PHPUnit test runner.
+  #
+  # Performs the following steps:
+  # - Checks out the repository.
+  # - Installs PHP.
+  # - Installs NodeJS 14 with caching configured.
+  # - Prepares the environment for tests.
+  # - Runs the tests.
+  # - Reports the results.
+  # - Cleans up.
+  test:
+    name: Run Core PHPUnit tests
+    runs-on: ubuntu-latest
+
+    # Remove this line if Github Actions is your preferred means of running the tests.
+    if: never()
+
+    env:
+      # This is only a subset/example of env vars available. See the `.env.default` file for a full list.
+      WPT_PREPARE_DIR: ${{ secrets.WPT_PREPARE_DIR }}
+      WPT_TEST_DIR: ${{ secrets.WPT_TEST_DIR }}
+      WPT_REPORT_API_KEY: ${{ secrets.WPT_REPORT_API_KEY }}
+      WPT_PHP_EXECUTABLE: ${{ secrets.WPT_PHP_EXECUTABLE }}
+      # Database settings
+      WPT_DB_NAME: ${{ secrets.WPT_DB_NAME }}
+      WPT_DB_USER: ${{ secrets.WPT_DB_USER }}
+      WPT_DB_PASSWORD: ${{ secrets.WPT_DB_PASSWORD }}
+      WPT_DB_HOST: ${{ secrets.WPT_DB_HOST }}
+      # SSH settings for connecting to the test environment.
+      WPT_SSH_CONNECT: ${{ secrets.WPT_SSH_CONNECT }}
+      WPT_SSH_PRIVATE_KEY_BASE64: ${{ secrets.WPT_SSH_PRIVATE_KEY_BASE64 }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # v2.3.4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@947009a71769c25ab5292f073f5343624b7c879d # v2.12.0
+        with:
+          php-version: '7.4'
+          coverage: none
+
+      - name: Install NodeJS
+        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # v2.4.0
+        with:
+          node-version: 14
+
+      - name: Prepare environment
+        run: php prepare.php
+
+      - name: Run unit tests
+        run: php test.php
+        # Prevent the workflow from stopping if there are test failures.
+        continue-on-error: true
+
+      - name: Report the results
+        run: php report.php
+
+      - name: Cleanup
+        run: php cleanup.php
