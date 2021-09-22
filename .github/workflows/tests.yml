@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Remove this line if Github Actions is your preferred means of running the tests.
-    if: never()
+    if: ${{ false }}
 
     env:
       # This is only a subset/example of env vars available. See the `.env.default` file for a full list.
