@@ -8,14 +8,18 @@ assignees: ''
 
 ---
 
-Requesting your bot user to be added to this WordPress.org site as a “Test Reporter”.
+Requesting your bot user to be added to this WordPress.org site [as a “Test Reporter”](https://make.wordpress.org/hosting/test-results/).
 
-**Preconditions checklist:**
+For more informations, please visit our [Getting Started](https://make.wordpress.org/hosting/test-results-getting-started/) Guide or the [Hosting Handbook](https://make.wordpress.org/hosting/handbook/tests/).
 
-* [ ] Please add a Gravatar/logo.
-* [ ] Add URL to the profile, to make it clear to users what hosting company is being represented in the results.
+**Preconditions Checklist:**
 
-**Informations:**
+* [ ] I've added a Gravatar/logo to the profile.
+* [ ] I've added a URL to the profile, to make it clear to users what hosting company is being represented in the results.
+* [ ] I've set the email address to something monitored by a human.
+* [ ] I've set the email address to one that uses the domain name of the hosting company.
 
-E-Mail: <!-- Make sure to set its email address to something monitored by a human -->
-Bot-Name: <!-- wonderfulbot -->
+**Bot Profile Details:**
+
+Bots email address: <!-- name@host.tld -->
+Bots WordPress profile: <!-- https://profiles.wordpress.org/<botname> -->
