@@ -1,5 +1,5 @@
 ---
-name: Test Reporter Request
+name: Test Reporter request
 about: Requesting your bot user to be added to this WordPress.org site as a “Test
   Reporter”.
 title: "[Test Reporter] "
