@@ -21,5 +21,5 @@ For more informations, please visit our [Getting Started](https://make.wordpress
 
 **Bot Profile Details:**
 
-Bots email address: <!-- name@host.tld -->
-Bots WordPress profile: <!-- https://profiles.wordpress.org/<botname> -->
+* Bots email address: <!-- name@host.tld -->
+* Bots WordPress profile: <!-- https://profiles.wordpress.org/<botname> -->
