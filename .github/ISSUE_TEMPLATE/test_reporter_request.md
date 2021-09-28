@@ -10,7 +10,7 @@ assignees: ''
 
 Requesting your bot user to be added to this WordPress.org site [as a “Test Reporter”](https://make.wordpress.org/hosting/test-results/).
 
-For more informations, please visit our [Getting Started](https://make.wordpress.org/hosting/test-results-getting-started/) Guide or the [Hosting Handbook](https://make.wordpress.org/hosting/handbook/tests/).
+For more information, please visit the [Getting Started](https://make.wordpress.org/hosting/test-results-getting-started/) Guide or the [Hosting Handbook](https://make.wordpress.org/hosting/handbook/tests/).
 
 **Preconditions Checklist:**
 
@@ -21,5 +21,5 @@ For more informations, please visit our [Getting Started](https://make.wordpress
 
 **Bot Profile Details:**
 
-* Bots email address: <!-- name@host.tld -->
-* Bots WordPress profile: <!-- https://profiles.wordpress.org/<botname> -->
+* Bot email address: <!-- name@host.tld -->
+* Bot WordPress profile: <!-- https://profiles.wordpress.org/<botname> -->
