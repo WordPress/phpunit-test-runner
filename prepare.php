@@ -100,7 +100,7 @@ if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) 
 	echo PHP_EOL;
 }
 EOT;
-$logger_replace_string = '// ** MySQL settings ** //' . PHP_EOL;
+$logger_replace_string = '// ** Database settings ** //' . PHP_EOL;
 $system_logger = $logger_replace_string . $system_logger;
 $php_binary_string = 'define( \'WP_PHP_BINARY\', \''. $WPT_PHP_EXECUTABLE . '\' );';
 $search_replace = array(
