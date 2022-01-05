@@ -86,6 +86,8 @@ jobs:
 
       - name: Report the results
         run: php report.php
+        # Prevent the workflow from stopping if the reporting fails.
+        continue-on-error: true
 
       - name: Cleanup
         run: php cleanup.php
