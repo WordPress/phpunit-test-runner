@@ -211,9 +211,9 @@ function get_env_details() {
 	foreach( $php_modules as $php_module ) {
 		$env['php_modules'][ $php_module ] = phpversion( $php_module );
 	}
-	$curl_bits = explode( PHP_EOL, str_replace( 'curl ', '', shell_exec( 'curl --version' ) ) );
-	$curl = array_shift( $curl_bits );
-	$env['system_utils']['curl'] = trim( $curl );
+	function curl_selected_bits($k) { return in_array($k, array('version', 'ssl_version', 'libz_version')); }
+	$curl_bits = curl_version();
+	$env['system_utils']['curl'] = implode(' ',array_values(array_filter($curl_bits, 'curl_selected_bits',ARRAY_FILTER_USE_KEY) ));
 	$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
