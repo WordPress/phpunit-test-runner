@@ -54,7 +54,6 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'php_version'    => phpversion(),
 	'php_modules'    => array(),
 	'system_utils'   => array(),
-	'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 	'os_name'        => trim( shell_exec( 'uname -s' ) ),
 	'os_version'     => trim( shell_exec( 'uname -r' ) ),
 );
@@ -92,13 +91,18 @@ if ( class_exists( 'Imagick' ) ) {
 	\$env['system_utils']['graphicsmagick'] = \$version[1];
 }
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
+EOT;
+$db_version = <<<EODB
+\$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+\$env['mysql_version'] = \$mysqli->query("SELECT VERSION()")->fetch_row()[0];
+\$mysqli->close();
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
 	echo PHP_EOL;
 	echo 'PHP version: ' . phpversion() . ' (' . realpath( \$_SERVER['_'] ) . ')' . PHP_EOL;
 	echo PHP_EOL;
 }
-EOT;
+EODB;
 $logger_replace_string = '// ** Database settings ** //' . PHP_EOL;
 $system_logger = $logger_replace_string . $system_logger;
 $php_binary_string = 'define( \'WP_PHP_BINARY\', \''. $WPT_PHP_EXECUTABLE . '\' );';
@@ -112,7 +116,7 @@ $search_replace = array(
 	$logger_replace_string                  => $system_logger,
 );
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
-file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
+file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents . $db_version);
 
 // Now, install PHPUnit based on the test environment's PHP Version
 $php_version_cmd = $WPT_PHP_EXECUTABLE . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
