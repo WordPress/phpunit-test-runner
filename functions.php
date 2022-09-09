@@ -214,7 +214,6 @@ function get_env_details() {
 	$curl_bits = explode( PHP_EOL, str_replace( 'curl ', '', shell_exec( 'curl --version' ) ) );
 	$curl = array_shift( $curl_bits );
 	$env['system_utils']['curl'] = trim( $curl );
-	$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
 		$version = $imagick->getVersion();
