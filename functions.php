@@ -214,7 +214,6 @@ function get_env_details() {
 	function curl_selected_bits($k) { return in_array($k, array('version', 'ssl_version', 'libz_version')); }
 	$curl_bits = curl_version();
 	$env['system_utils']['curl'] = implode(' ',array_values(array_filter($curl_bits, 'curl_selected_bits',ARRAY_FILTER_USE_KEY) ));
-	$env['system_utils']['ghostscript'] = trim( shell_exec( 'gs --version' ) );
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
 		$version = $imagick->getVersion();
