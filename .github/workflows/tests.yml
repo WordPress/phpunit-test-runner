@@ -20,6 +20,7 @@ on:
      # - cron:  '0 0 * * *'
      # Every 30 minutes.
      # - cron:  '0/30 * * * *'
+   workflow_dispatch:
 
 # Cancels all previous workflow runs for pull requests that have not completed.
 concurrency:
@@ -42,7 +43,7 @@ jobs:
   test:
     name: Run Core PHPUnit tests
     runs-on: ubuntu-latest
-
+    
     # Remove this line if Github Actions is your preferred means of running the tests.
     if: ${{ false }}
 
