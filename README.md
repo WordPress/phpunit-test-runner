@@ -69,7 +69,7 @@ Prep environment:
 
 * PHP 5.6 or greater (to run scripts).
 * Utilities: `git` version 1.8.5 or greater, `rsync`, `wget`, `unzip`.
-* Node.js including `npm` and `grunt` packages
+* Node.js 14.x, including `npm` and `grunt` packages
 
 Test environment:
 
