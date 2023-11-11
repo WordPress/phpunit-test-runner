@@ -145,11 +145,11 @@ $logger_replace_string = '// ** Database settings ** //' . PHP_EOL;
 $system_logger = $logger_replace_string . $system_logger;
 $php_binary_string = 'define( \'WP_PHP_BINARY\', \''. $WPT_PHP_EXECUTABLE . '\' );';
 $search_replace = array(
-	'wptests_'                              => getenv( 'WPT_TABLE_PREFIX' ) ? : 'wptests_',
-	'youremptytestdbnamehere'               => getenv( 'WPT_DB_NAME' ),
-	'yourusernamehere'                      => getenv( 'WPT_DB_USER' ),
-	'yourpasswordhere'                      => getenv( 'WPT_DB_PASSWORD' ),
-	'localhost'                             => getenv( 'WPT_DB_HOST' ),
+	'wptests_'                              => trim( getenv( 'WPT_TABLE_PREFIX' ) ) ? : 'wptests_',
+	'youremptytestdbnamehere'               => trim( getenv( 'WPT_DB_NAME' ) ),
+	'yourusernamehere'                      => trim( getenv( 'WPT_DB_USER' ) ),
+	'yourpasswordhere'                      => trim( getenv( 'WPT_DB_PASSWORD' ) ),
+	'localhost'                             => trim( getenv( 'WPT_DB_HOST' ) ),
 	'define( \'WP_PHP_BINARY\', \'php\' );' => $php_binary_string,
 	$logger_replace_string                  => $system_logger,
 );
