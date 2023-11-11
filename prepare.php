@@ -39,10 +39,17 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 		mkdir( getenv( 'HOME' ) . '/.ssh', 0777, true );
 	}
 	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $WPT_SSH_PRIVATE_KEY_BASE64 ) );
-	perform_operations( array(
-		'chmod 600 ~/.ssh/id_rsa',
-		'ssh -q ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' wp cli info',
-	) );
+	if( empty( $WPT_SSH_CONNECT ) ) {
+		perform_operations( array(
+			'chmod 600 ~/.ssh/id_rsa',
+			'wp cli info',
+		) );
+	} else {
+		perform_operations( array(
+			'chmod 600 ~/.ssh/id_rsa',
+			'ssh -q ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' wp cli info',
+		) );
+	}
 }
 
 // Create the preparation directory and fetch corresponding files
