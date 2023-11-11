@@ -77,6 +77,8 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'mod_xml',
 	'mysqli',
 	'pcre',
+	'sqlite',
+	'sqlite3',
 	'xml',
 	'xmlreader',
 	'zlib',
