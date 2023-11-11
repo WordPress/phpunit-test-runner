@@ -19,13 +19,11 @@ $WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
 switch( $WPT_DEBUG_INI ) {
 	case 0:
 	case 'false'
-	case false:
 	default:
 		$WPT_DEBUG = false;
 		break;
 	case 1:
 	case 'true'
-	case true:
 		$WPT_DEBUG = true;
 		break;
 }
