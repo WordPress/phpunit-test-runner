@@ -10,12 +10,26 @@ require __DIR__ . '/functions.php';
 check_required_env();
 
 // Bring some environment variables into scope.
-$WPT_PREPARE_DIR = getenv( 'WPT_PREPARE_DIR' );
-$WPT_SSH_CONNECT = getenv( 'WPT_SSH_CONNECT' );
-$WPT_SSH_OPTIONS = getenv( 'WPT_SSH_OPTIONS' ) ? : '-o StrictHostKeyChecking=no';
-$WPT_TEST_DIR = getenv( 'WPT_TEST_DIR' );
-$WPT_PHP_EXECUTABLE = getenv( 'WPT_PHP_EXECUTABLE' ) ? : 'php';
-$WPT_DEBUG = getenv( 'WPT_DEBUG' );
+$WPT_PREPARE_DIR = trim( getenv( 'WPT_PREPARE_DIR' ) );
+$WPT_SSH_CONNECT = trim( getenv( 'WPT_SSH_CONNECT' ) );
+$WPT_SSH_OPTIONS = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
+$WPT_TEST_DIR = trim( getenv( 'WPT_TEST_DIR' ) );
+$WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
+$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
+switch( $WPT_DEBUG_INI ) {
+	case 0:
+	case 'false'
+	case false:
+	default:
+		$WPT_DEBUG = false;
+		break;
+	case 1:
+	case 'true'
+	case true:
+		$WPT_DEBUG = true;
+		break;
+}
+unset( $WPT_DEBUG_INI );
 
 // Set the ssh private key if it's set.
 $WPT_SSH_PRIVATE_KEY_BASE64 = getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' );
