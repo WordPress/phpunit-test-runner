@@ -21,10 +21,10 @@ check_required_env();
  * These variables are used to configure SSH connections, file paths, and
  * executable commands needed for setting up the test environment.
  */
-$WPT_PREPARE_DIR = trim( getenv( 'WPT_PREPARE_DIR' ) );
-$WPT_SSH_CONNECT = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_SSH_OPTIONS = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
-$WPT_TEST_DIR = trim( getenv( 'WPT_TEST_DIR' ) );
+$WPT_PREPARE_DIR     = trim( getenv( 'WPT_PREPARE_DIR' ) );
+$WPT_SSH_CONNECT     = trim( getenv( 'WPT_SSH_CONNECT' ) );
+$WPT_SSH_OPTIONS     = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
+$WPT_TEST_DIR        = trim( getenv( 'WPT_TEST_DIR' ) );
 $WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR;
 
 /**
