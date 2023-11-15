@@ -27,6 +27,42 @@ $WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
 $WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
 $WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
 
+// Uses the flavor (usually to test WordPress Multisite)
+$WPT_FLAVOR_INI = trim( getenv( 'WPT_FLAVOR' ) );
+switch( $WPT_FLAVOR_INI ) {
+	case 0:
+		$WPT_FLAVOR_TXT = ''; // Simple WordPress
+		break;
+	case 1:
+		$WPT_FLAVOR_TXT = ' -c tests/phpunit/multisite.xml'; // WordPress Multisite
+		break;
+	default:
+		$WPT_FLAVOR_TXT = '';
+		break;
+}
+unset( $WPT_FLAVOR_INI );
+
+// Uses the flavor (usually to test WordPress Multisite)
+$WPT_EXTRATESTS_INI = trim( getenv( 'WPT_EXTRATESTS' ) );
+switch( $WPT_EXTRATESTS_INI ) {
+	case 0:
+		$WPT_EXTRATESTS_TXT = ''; // no extra tests
+		break;
+	case 1:
+		$WPT_EXTRATESTS_TXT = ' --group ajax'; // ajax tests
+		break;
+	case 2:
+		$WPT_EXTRATESTS_TXT = ' --group ms-files'; // ms-files tests
+		break;
+	case 3:
+		$WPT_EXTRATESTS_TXT = ' --group external-http'; // external-http tests
+		break;
+	default:
+		$WPT_EXTRATESTS_TXT = '';
+		break;
+}
+unset( $WPT_EXTRATESTS_INI );
+
 /**
  * Determines the PHPUnit command to execute the test suite.
  * Retrieves the PHPUnit command from the environment variable 'WPT_PHPUNIT_CMD'. If the environment
@@ -36,7 +72,7 @@ $WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests';
+	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT;
 }
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.
