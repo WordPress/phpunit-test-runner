@@ -278,21 +278,7 @@ if ( $retval !== 0 ) {
 }
 
 // Log the obtained PHP version for confirmation and debugging purposes.
-log_message( "Environment PHP Version: $env_php_version" );
-
-
-/**
- * Ensures compatibility with PHPUnit by adjusting the PHP version if needed.
- * If the environment's PHP version is 8.x.x, it overrides the version to 7.4.
- * This is because the core PHPUnit tests may not be compatible with PHP 8.x.x.
- */
-if ( substr( $env_php_version, 0 , 2 ) === '8.' ) {
-	// Log the occurrence of PHP version 8.x.x and the decision to use PHPUnit compatible with PHP 7.4 instead.
-	log_message( 'Version 8.x.x Found. Downloading PHPUnit for PHP 7.4 instead for compatibility.' );
-
-	// Override the PHP version to 7.4 for PHPUnit compatibility.
-	$env_php_version = '7.4';
-}
+log_message( 'Environment PHP Version: ' . $env_php_version );
 
 /**
  * Checks if the detected PHP version is below 7.0.
@@ -301,56 +287,42 @@ if ( substr( $env_php_version, 0 , 2 ) === '8.' ) {
  */
 if ( version_compare( $env_php_version, '7.0', '<' ) ) {
 	// Logs an error message indicating the test runner's incompatibility with PHP versions below 7.0.
-	error_message( "The test runner is not compatible with PHP < 7.0." );
+	error_message( 'The test runner is not compatible with PHP < 7.0.' );
 }
 
 /**
- * Installs PHPUnit 5.7 directly if the PHP version is less than 7.1.
- * PHPUnit 5.7 is the last version to support PHP 7.0.
+ * Use Composer to manage PHPUnit and its dependencies.
+ * This allows for better dependency management and compatibility.
  */
-if ( version_compare( $env_php_version, '7.1', '<' ) ) {
 
-	// Download the PHPUnit phar file directly using wget.
-	perform_operations( array(
-		'wget -O ' .  escapeshellarg( $WPT_PREPARE_DIR . '/phpunit.phar' ) . ' https://phar.phpunit.de/phpunit-5.7.phar',
-	) );
+// Check if Composer is installed and available in the PATH.
+$composer_cmd = 'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && ';
+$retval = 0;
+$composer_path = escapeshellarg( system( 'which composer', $retval ) );
+
+if ( $retval === 0 ) {
+
+	// If Composer is available, prepare the command to use the Composer binary.
+	$composer_cmd .= $composer_path . ' ';
 
 } else {
 
-	/**
-	 * If the PHP version is 7.1 or greater, use Composer to manage PHPUnit and its dependencies.
-	 * This allows for better dependency management and compatibility.
-	 */
+	// If Composer is not available, download the Composer phar file.
+	log_message( 'Local Composer not found. Downloading latest stable ...' );
 
-	// Check if Composer is installed and available in the PATH.
-	$composer_cmd = 'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && ';
-	$retval = 0;
-	$composer_path = escapeshellarg( system( 'which composer', $retval ) );
-
-	if ( $retval === 0 ) {
-
-		// If Composer is available, prepare the command to use the Composer binary.
-		$composer_cmd .= $composer_path . ' ';
-
-	} else {
-
-		// If Composer is not available, download the Composer phar file.
-		log_message( 'Local Composer not found. Downloading latest stable ...' );
-
-		perform_operations( array(
-			'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/composer.phar' ) . ' https://getcomposer.org/composer-stable.phar',
-		) );
-
-		// Update the command to use the downloaded Composer phar file.
-		$composer_cmd .= 'php composer.phar ';
-	}
-
-	// Set the PHP version for Composer to ensure compatibility and update dependencies.
 	perform_operations( array(
-		$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
-		$composer_cmd . 'update',
+		'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/composer.phar' ) . ' https://getcomposer.org/composer-stable.phar',
 	) );
+
+	// Update the command to use the downloaded Composer phar file.
+	$composer_cmd .= 'php composer.phar ';
 }
+
+// Set the PHP version for Composer to ensure compatibility and update dependencies.
+perform_operations( array(
+	$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
+	$composer_cmd . 'update',
+) );
 
 /**
  * If an SSH connection is configured, use rsync to transfer the prepared files to the remote test environment.
