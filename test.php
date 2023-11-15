@@ -72,7 +72,7 @@ unset( $WPT_EXTRATESTS_INI );
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT;
+	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT;
 }
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.
