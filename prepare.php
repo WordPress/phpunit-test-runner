@@ -43,6 +43,9 @@ switch( $WPT_DEBUG_INI ) {
 	case 'true':
 		$WPT_DEBUG = true;
 		break;
+	case 'verbose':
+		$WPT_DEBUG = 'verbose';
+		break;
 	default:
 		$WPT_DEBUG = false;
 		break;
