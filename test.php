@@ -27,8 +27,17 @@ $WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
 $WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
 $WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
 
-// This uses `||` to run PHPUnit when it is downloaded manually (like for PHP 5.6-7.0) rather than through Composer.
-$WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) ) ? : 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests || ' . $WPT_PHP_EXECUTABLE . ' phpunit.phar --dont-report-useless-tests';
+/**
+ * Determines the PHPUnit command to execute the test suite.
+ * Retrieves the PHPUnit command from the environment variable 'WPT_PHPUNIT_CMD'. If the environment
+ * variable is not set or is empty, it constructs a default command using the PHP executable path and
+ * the test directory path from environment variables, appending parameters to the PHPUnit call to
+ * avoid reporting useless tests.
+ */
+$WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
+if( empty( $WPT_PHPUNIT_CMD ) ) {
+	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests';
+}
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
