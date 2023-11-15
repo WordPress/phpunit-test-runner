@@ -6,6 +6,7 @@
  * The script assumes that certain environment variables are set to configure SSH,
  * directories, and executables used in the test preparation process.
  *
+ * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
