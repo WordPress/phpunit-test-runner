@@ -28,6 +28,7 @@ $WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
 $WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
 $WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
 $WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
+$WPT_CERTIFICATE_VALIDATION = trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) );
 
 /**
  * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
@@ -41,8 +42,6 @@ switch( $WPT_DEBUG_INI ) {
 		break;
 	case 1:
 	case 'true':
-		$WPT_DEBUG = true;
-		break;
 	case 'verbose':
 		$WPT_DEBUG = 'verbose';
 		break;
@@ -99,6 +98,15 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 }
 
 /**
+ * Don't validate the TLS certificate
+ * Useful for local environments
+ */
+$certificate_validation = '';
+if( ! $WPT_CERTIFICATE_VALIDATION ) {
+	$certificate_validation .= ' --no-check-certificate';
+}
+
+/**
  * Performs a series of operations to set up the test environment. This includes creating a preparation directory,
  * cloning the WordPress development repository, downloading the WordPress importer plugin, and preparing the environment with npm.
  */
@@ -113,7 +121,7 @@ perform_operations( array(
 	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
 
 	// Download the WordPress importer plugin zip file to the specified plugins directory.
-	'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip',
+	'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip' . $certificate_validation,
 
 	// Change directory to the plugin directory, unzip the WordPress importer plugin, and remove the zip file.
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
