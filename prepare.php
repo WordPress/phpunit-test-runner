@@ -84,12 +84,12 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 	if( empty( $WPT_SSH_CONNECT ) ) {
 		perform_operations( array(
 			'chmod 600 ~/.ssh/id_rsa',
-			'wp cli info',
+			'wp cli info'
 		) );
 	} else {
 		perform_operations( array(
 			'chmod 600 ~/.ssh/id_rsa',
-			'ssh -q ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' wp cli info',
+			'ssh -q ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' wp cli info'
 		) );
 	}
 
@@ -116,7 +116,7 @@ perform_operations( array(
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
 
 	// Change directory to the preparation directory, install npm dependencies, and build the project.
-	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build',
+	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build'
 
 ) );
 
