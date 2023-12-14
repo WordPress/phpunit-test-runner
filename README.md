@@ -4,7 +4,7 @@ Thanks for running the WordPress PHPUnit test suite on your infrastructure. We a
 
 If you haven't already, [please first read through the "Getting Started" documentation](https://make.wordpress.org/hosting/test-results-getting-started/).
 
-The test suite runner is designed to be used without any file modification. Configuration happens with a series of environment variables (see [.env.default](.env.default) for an annotated overview). Use the [repository wiki](../../wiki) to document implementation details, to avoid README conflicts with the upstream.
+The test suite runner is designed to be used without any file modification. Configuration happens with a series of environment variables (see [.env.default](.env.default) for an annotated overview).
 
 At a high level, the test suite runner:
 
@@ -67,13 +67,13 @@ Both the prep and test environments must meet some basic requirements.
 
 Prep environment:
 
-* PHP 5.6 or greater (to run scripts).
+* PHP 7.x or greater (to run scripts).
 * Utilities: `git` version 1.8.5 or greater, `rsync`, `wget`, `unzip`.
-* Node.js 14.x, including `npm` and `grunt` packages
+* Node.js 16.x, including `npm` and `grunt` packages
 
 Test environment:
 
-* PHP 5.6 or greater with Phar support enabled (for PHPUnit).
+* PHP 7.x or greater with Phar support enabled (for PHPUnit).
 * MySQL or MariaDB with access to a writable database.
 * Writable filesystem for the entire test directory (see [#40910](https://core.trac.wordpress.org/ticket/40910)).
 * Run with a non-root user, both for security and practical purposes (see [#44233](https://core.trac.wordpress.org/ticket/44233#comment:34)/[#46577](https://core.trac.wordpress.org/ticket/46577)).
@@ -110,7 +110,7 @@ The [`cleanup.php`](cleanup.php) step:
 
 ## Contributing
 
-tk
+If you have questions about the process or run into test failures along the way, please [open an issue in the project repository](https://github.com/wordpress/phpunit-test-runner/issues) and we’ll help diagnose/get the documentation updated. Alternatively, you can also pop into the `#hosting-community` channel on [WordPress.org Slack](https://make.wordpress.org/chat/) for help.
 
 ## License
 
