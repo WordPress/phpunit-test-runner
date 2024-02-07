@@ -1,6 +1,6 @@
 language: php
 node_js:
-  - node
+  - 14
 
 before_install:
   - npm install -g npm@latest
