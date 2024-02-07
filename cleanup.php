@@ -1,5 +1,4 @@
 <?php
-
 /**
  * This script is responsible for cleaning up the test environment after a run of the WordPress PHPUnit Test Runner.
  * It ensures that temporary directories and files created during the test process are properly deleted.
