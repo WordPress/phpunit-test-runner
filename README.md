@@ -53,7 +53,7 @@ cat ~/.ssh/id_rsa | base64 --wrap=0
 cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 ```
 
-Use a more complex SSH connection process by creating a SSH alias:
+Use a more complex SSH connection process by creating an SSH alias:
 
 ```bash
 # 1. Add the following to ~/.ssh/config to create a 'wpt' alias
