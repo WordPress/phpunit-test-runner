@@ -161,7 +161,6 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : array(),
 	'imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : array(),
 	'system_utils'   => array(),
-	'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 	'os_name'        => trim( shell_exec( 'uname -s' ) ),
 	'os_version'     => trim( shell_exec( 'uname -r' ) ),
 );
@@ -220,6 +219,10 @@ if ( class_exists( 'Imagick' ) ) {
 	\$env['system_utils']['graphicsmagick'] = \$version[1];
 }
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
+
+\$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+\$env['mysql_version'] = \$mysqli->query("SELECT VERSION()")->fetch_row()[0];
+\$mysqli->close();
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
 	echo PHP_EOL;

@@ -280,13 +280,16 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
  * @uses class_exists() to check for the availability of the Imagick and Gmagick classes for version detection.
  */
 function get_env_details() {
+	$WPT_DB_HOST = getenv( 'WPT_DB_HOST' ) ? : 'localhost';
+	$WPT_DB_USER = getenv( 'WPT_DB_USER' );
+	$WPT_DB_PASSWORD = getenv( 'WPT_DB_PASSWORD' );
+	$WPT_DB_NAME = getenv( 'WPT_DB_NAME' );
 	$env = array(
 		'php_version'    => phpversion(),
 		'php_modules'    => array(),
 		'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : array(),
 		'imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : array(),
 		'system_utils'   => array(),
-		'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 		'os_name'        => trim( shell_exec( 'uname -s' ) ),
 		'os_version'     => trim( shell_exec( 'uname -r' ) ),
 	);
@@ -333,6 +336,10 @@ function get_env_details() {
 	$curl_bits = explode( PHP_EOL, str_replace( 'curl ', '', shell_exec( 'curl --version' ) ) );
 	$curl = array_shift( $curl_bits );
 	$env['system_utils']['curl'] = trim( $curl );
+	$mysqli = new mysqli($WPT_DB_HOST, $WPT_DB_USER, $WPT_DB_PASSWORD, $WPT_DB_NAME);
+	$env['mysql_version'] = $mysqli->query("SELECT VERSION()")->fetch_row()[0];
+	$mysqli->close();
+
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
 		$version = $imagick->getVersion();
