@@ -280,19 +280,28 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
  * @uses class_exists() to check for the availability of the Imagick and Gmagick classes for version detection.
  */
 function get_env_details() {
-	$WPT_DB_HOST = getenv( 'WPT_DB_HOST' ) ? : 'localhost';
-	$WPT_DB_USER = getenv( 'WPT_DB_USER' );
-	$WPT_DB_PASSWORD = getenv( 'WPT_DB_PASSWORD' );
-	$WPT_DB_NAME = getenv( 'WPT_DB_NAME' );
+
+	$gd_info = array();
+	if( extension_loaded( 'gd' ) ) {
+		$gd_info = gd_info();
+	}
+	$imagick_info = array();
+	if( extension_loaded( 'imagick' ) ) {
+		$imagick_info = Imagick::queryFormats();
+	}
+
 	$env = array(
 		'php_version'    => phpversion(),
 		'php_modules'    => array(),
-		'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : array(),
-		'imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : array(),
+		'gd_info'        => $gd_info,
+		'imagick_info'   => $imagick_info,
+		'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 		'system_utils'   => array(),
 		'os_name'        => trim( shell_exec( 'uname -s' ) ),
 		'os_version'     => trim( shell_exec( 'uname -r' ) ),
 	);
+	unset( $gd_info, $imagick_info );
+
 	$php_modules = array(
 		'bcmath',
 		'ctype',
@@ -333,12 +342,22 @@ function get_env_details() {
 	foreach( $php_modules as $php_module ) {
 		$env['php_modules'][ $php_module ] = phpversion( $php_module );
 	}
+
 	function curl_selected_bits($k) { return in_array($k, array('version', 'ssl_version', 'libz_version')); }
 	$curl_bits = curl_version();
 	$env['system_utils']['curl'] = implode(' ',array_values(array_filter($curl_bits, 'curl_selected_bits',ARRAY_FILTER_USE_KEY) ));
-	$mysqli = new mysqli($WPT_DB_HOST, $WPT_DB_USER, $WPT_DB_PASSWORD, $WPT_DB_NAME);
-	$env['mysql_version'] = $mysqli->query("SELECT VERSION()")->fetch_row()[0];
-	$mysqli->close();
+
+	$WPT_DB_HOST		 	= trim( getenv( 'WPT_DB_HOST' ) );
+	if( ! $WPT_DB_HOST ) {
+		$WPT_DB_HOST = 'localhost';
+	}
+	$WPT_DB_USER 			= trim( getenv( 'WPT_DB_USER' ) );
+	$WPT_DB_PASSWORD 	= trim( getenv( 'WPT_DB_PASSWORD' ) );
+	$WPT_DB_NAME 			= trim( getenv( 'WPT_DB_NAME' ) );
+
+	//$mysqli = new mysqli( $WPT_DB_HOST, $WPT_DB_USER, $WPT_DB_PASSWORD, $WPT_DB_NAME );
+	//$env['mysql_version'] = $mysqli->query("SELECT VERSION()")->fetch_row()[0];
+	//$mysqli->close();
 
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
@@ -351,6 +370,8 @@ function get_env_details() {
 		preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $version );
 		$env['system_utils']['graphicsmagick'] = $version[1];
 	}
+
 	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
+
 	return $env;
 }

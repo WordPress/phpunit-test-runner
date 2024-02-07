@@ -155,11 +155,20 @@ if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
 	mkdir( __DIR__ . '/tests/phpunit/build/logs/', 0777, true );
 }
 // Log environment details that are useful to have reported.
+\$gd_info = array();
+if( extension_loaded( 'gd' ) ) {
+	\$gd_info = gd_info();
+}
+\$imagick_info = array();
+if( extension_loaded( 'imagick' ) ) {
+	\$imagick_info = Imagick::queryFormats();
+}
 \$env = array(
 	'php_version'    => phpversion(),
 	'php_modules'    => array(),
-	'gd_info'        => extension_loaded( 'gd' ) ? gd_info() : array(),
-	'imagick_info'   => extension_loaded( 'imagick' ) ? Imagick::queryFormats() : array(),
+	'gd_info'        => \$gd_info,
+	'imagick_info'   => \$imagick_info,
+	'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
 	'system_utils'   => array(),
 	'os_name'        => trim( shell_exec( 'uname -s' ) ),
 	'os_version'     => trim( shell_exec( 'uname -r' ) ),
@@ -219,10 +228,9 @@ if ( class_exists( 'Imagick' ) ) {
 	\$env['system_utils']['graphicsmagick'] = \$version[1];
 }
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
-
-\$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
-\$env['mysql_version'] = \$mysqli->query("SELECT VERSION()")->fetch_row()[0];
-\$mysqli->close();
+//\$mysqli = new mysqli( WPT_DB_HOST, WPT_DB_USER, WPT_DB_PASSWORD, WPT_DB_NAME );
+//\$env['mysql_version'] = \$mysqli->query("SELECT VERSION()")->fetch_row()[0];
+//\$mysqli->close();
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
 	echo PHP_EOL;
