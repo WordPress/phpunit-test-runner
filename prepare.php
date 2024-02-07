@@ -1,5 +1,4 @@
 <?php
-
 /**
  * This script prepares the environment for WordPress unit tests.
  * It sets up the necessary variables and configurations based on the environment.

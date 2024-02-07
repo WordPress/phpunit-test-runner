@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Executes the PHPUnit test suite within the WordPress testing environment.
  * This script is designed to run tests either locally or on a remote server based on the environment setup.

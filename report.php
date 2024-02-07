@@ -1,5 +1,4 @@
 <?php
-
 /**
  * This script is responsible for reporting the results of the PHPUnit test runs to WordPress.org.
  * It gathers necessary information such as the SVN revision, test run messages, and the junit.xml
