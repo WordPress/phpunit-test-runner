@@ -24,30 +24,94 @@ $WPT_PREPARE_DIR     = trim( getenv( 'WPT_PREPARE_DIR' ) );
 $WPT_SSH_CONNECT     = trim( getenv( 'WPT_SSH_CONNECT' ) );
 $WPT_SSH_OPTIONS     = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
 $WPT_TEST_DIR        = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR;
+$WPT_PHP_EXECUTABLE_MULTI = trim( getenv( 'WPT_PHP_EXECUTABLE_MULTI' ) ) ? : '';
 
 /**
- * The directory path of the test preparation directory is assumed to be previously defined.
- * For example: $WPT_PREPARE_DIR = '/path/to/your/preparation/dir';
- * Clean up the preparation directory.
- * Forcefully deletes only the .git directory and the node_modules cache.
- * Afterward, the entire preparation directory is removed to ensure a clean state for the next test run.
  */
-perform_operations( array(
-	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/.git' ),
-	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/node_modules/.cache' ),
-	'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR ),
-) );
+$WPT_PHP_EXECUTABLE_MULTI_ARRAY = array();
+if ( '' !== $WPT_PHP_EXECUTABLE_MULTI ) {
 
-/**
- * Cleans up the test directory on a remote server.
- * This conditional block checks if an SSH connection string is provided and is not empty.
- * If a connection string is present, it triggers a cleanup operation on the remote environment.
- * The cleanup operation is executed by the `perform_operations` function which takes an array
- * of shell commands as its input.
- */
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
+	$php_multi_versions = explode( ',', $WPT_PHP_EXECUTABLE_MULTI );
+
+	foreach( $php_multi_versions as $php_multi_version ) {
+
+		$php_multi_v = explode( '+', $php_multi_version );
+
+		if( isset( $php_multi_v[0] ) && $php_multi_v[0] && isset( $php_multi_v[1] ) && $php_multi_v[1] ) {
+			$WPT_PHP_EXECUTABLE_MULTI_ARRAY[] = array( 'version' => trim( $php_multi_v[0] ), 'bin' => trim( $php_multi_v[1] ) );
+		}
+
+		unset( $php_multi_version );
+	}
+	
+	unset( $php_multi_versions );
+}
+
+if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
+
+	foreach( $WPT_PHP_EXECUTABLE_MULTI_ARRAY as $php_multi ) {
+
+		$WPT_PREPARE_DIR_MULTI = $WPT_PREPARE_DIR . '-' . crc32( $php_multi['version'] );
+		$WPT_TEST_DIR_MULTI = $WPT_TEST_DIR . '-' . crc32( $php_multi['version'] );
+
+		$WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR_MULTI;
+
+		/**
+		 * The directory path of the test preparation directory is assumed to be previously defined.
+		 * For example: $WPT_PREPARE_DIR = '/path/to/your/preparation/dir';
+		 * Clean up the preparation directory.
+		 * Forcefully deletes only the .git directory and the node_modules cache.
+		 * Afterward, the entire preparation directory is removed to ensure a clean state for the next test run.
+		 */
+		perform_operations( array(
+			'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI . '/.git' ),
+			'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI . '/node_modules/.cache' ),
+			'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+		) );
+
+		/**
+		 * Cleans up the test directory on a remote server.
+		 * This conditional block checks if an SSH connection string is provided and is not empty.
+		 * If a connection string is present, it triggers a cleanup operation on the remote environment.
+		 * The cleanup operation is executed by the `perform_operations` function which takes an array
+		 * of shell commands as its input.
+		 */
+		if ( ! empty( $WPT_SSH_CONNECT ) ) {
+			perform_operations( array(
+				'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
+			) );
+		}
+
+	}
+
+} else {
+
+	$WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR;
+
+	/**
+	 * The directory path of the test preparation directory is assumed to be previously defined.
+	 * For example: $WPT_PREPARE_DIR = '/path/to/your/preparation/dir';
+	 * Clean up the preparation directory.
+	 * Forcefully deletes only the .git directory and the node_modules cache.
+	 * Afterward, the entire preparation directory is removed to ensure a clean state for the next test run.
+	 */
 	perform_operations( array(
-		'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
+		'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/.git' ),
+		'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/node_modules/.cache' ),
+		'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR ),
 	) );
+
+	/**
+	 * Cleans up the test directory on a remote server.
+	 * This conditional block checks if an SSH connection string is provided and is not empty.
+	 * If a connection string is present, it triggers a cleanup operation on the remote environment.
+	 * The cleanup operation is executed by the `perform_operations` function which takes an array
+	 * of shell commands as its input.
+	 */
+	if ( ! empty( $WPT_SSH_CONNECT ) ) {
+		perform_operations( array(
+			'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
+		) );
+	}
+
 }
