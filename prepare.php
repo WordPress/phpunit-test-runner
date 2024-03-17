@@ -131,6 +131,11 @@ if( count( $WPT_COMMIT ) ) {
 			unset( $key, $commithash );
 		}
 
+		// Remove duplicates from pending_commits that are in executed_commits or are the testing_commit
+		$pending_commits = array_filter( $pending_commits, function( $commithash ) use ( $executed_commits, $testing_commit ) {
+			return !in_array( $commithash, $executed_commits ) && $commithash !== $testing_commit;
+		});
+
 		foreach ($WPT_COMMIT as $commithash) {
 			if (!in_array($commithash, $pending_commits) && !in_array($commithash, $executed_commits)) {
 
