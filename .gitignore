@@ -2,3 +2,5 @@
 .env*
 vendor/
 package-lock.json
+commit.json
+ignore.json
