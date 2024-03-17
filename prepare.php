@@ -580,7 +580,7 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 		'git clone --depth=10 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
 
-		'git config --add safe.directory ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+		'git config --add safe.directory ' . escapeshellarg( $WPT_PREPARE_DIR ),
 
 	) );
 
@@ -613,7 +613,7 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 			
 			perform_operations( array(
 
-				'cd ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+				'cd ' . escapeshellarg( $WPT_PREPARE_DIR ),
 				'git checkout ' . $commit_sha,
 
 			) );
@@ -637,11 +637,6 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 
 	// Log a message indicating the start of the variable replacement process for configuration.
 	log_message( 'Replacing variables in wp-tests-config.php' );
-
-
-exit;
-
-
 
 	/**
 	 * Reads the contents of the WordPress test configuration sample file.
