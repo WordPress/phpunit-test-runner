@@ -52,6 +52,42 @@ unset( $WPT_DEBUG_INI );
 
 /**
  */
+$WPT_COMMITS_INI = getenv( 'WPT_COMMITS' );
+switch( $WPT_COMMITS_INI ) {
+	case 0:
+	case 'false':
+		$WPT_COMMITS = false;
+		break;
+	case 1:
+	case 'true':
+		$WPT_COMMITS = true;
+		break;
+	default:
+		$WPT_COMMITS = false;
+		break;
+}
+unset( $WPT_COMMITS_INI );
+
+/**
+ */
+$WPT_COMMITS_INI = getenv( 'WPT_COMMITS' );
+switch( $WPT_COMMITS_INI ) {
+	case 0:
+	case 'false':
+		$WPT_COMMITS = false;
+		break;
+	case 1:
+	case 'true':
+		$WPT_COMMITS = true;
+		break;
+	default:
+		$WPT_COMMITS = false;
+		break;
+}
+unset( $WPT_COMMITS_INI );
+
+/**
+ */
 $WPT_PHP_EXECUTABLE_MULTI_ARRAY = array();
 if ( '' !== $WPT_PHP_EXECUTABLE_MULTI ) {
 
@@ -85,6 +121,28 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 
 		$WPT_PREPARE_DIR_MULTI = $WPT_PREPARE_DIR . '-' . crc32( $php_multi['version'] );
 		$WPT_TEST_DIR_MULTI = $WPT_TEST_DIR . '-' . crc32( $php_multi['version'] );
+
+		if( $WPT_COMMITS ) {
+
+			$commit_sha = null;
+			if( file_exists( __DIR__ . '/commits.json' ) ) {
+		
+				$c_array = json_decode( file_get_contents( __DIR__ . '/commits.json' ), true );
+				
+				if( isset( $c_array['testing_commit'] ) && count( $c_array['testing_commit'] ) ) {
+
+					$c_array['executed_commits'][] = $c_array['testing_commit'][0];
+					
+					unset( $c_array['testing_commit'][0] );
+
+				}
+
+				$c_json = json_encode( $c_array );
+		
+				file_put_contents( __DIR__ . '/commits.json', $c_json );
+
+			}
+		}
 
 		/**
 		 * Retrieves the SVN revision number from the git repository log.
@@ -218,6 +276,28 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 	}
 	
 } else {
+
+	if( $WPT_COMMITS ) {
+
+		$commit_sha = null;
+		if( file_exists( __DIR__ . '/commits.json' ) ) {
+	
+			$c_array = json_decode( file_get_contents( __DIR__ . '/commits.json' ), true );
+			
+			if( isset( $c_array['testing_commit'] ) && count( $c_array['testing_commit'] ) ) {
+
+				$c_array['executed_commits'][] = $c_array['testing_commit'][0];
+				
+				unset( $c_array['testing_commit'][0] );
+
+			}
+
+			$c_json = json_encode( $c_array );
+	
+			file_put_contents( __DIR__ . '/commits.json', $c_json );
+
+		}
+	}
 
 	/**
 	 * Retrieves the SVN revision number from the git repository log.
