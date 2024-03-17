@@ -99,6 +99,12 @@ if( count( $WPT_COMMIT ) ) {
 		
 		$c_array = json_decode( file_get_contents( __DIR__ . '/commits.json' ), true );
 		
+		if( isset( $c_array['testing_commit'] ) ) {
+			$testing_commit = $c_array['testing_commit'];
+		} else {
+			$testing_commit = array();
+		}
+
 		if( isset( $c_array['executed_commits'] ) ) {
 			$executed_commits = $c_array['executed_commits'];
 		} else {
@@ -132,9 +138,9 @@ if( count( $WPT_COMMIT ) ) {
 			unset( $commithash );
 		}
 
-		$c = array( 'executed_commits' => $executed_commits, 'pending_commits' => $pending_commits );
+		$c = array( 'executed_commits' => $executed_commits, 'pending_commits' => $pending_commits, 'testing_commit' => $testing_commit );
 
-		unset( $executed_commits, $pending_commits );
+		unset( $executed_commits, $pending_commits, $testing_commit );
 
 		$c_json = json_encode( $c );
 		
@@ -145,7 +151,7 @@ if( count( $WPT_COMMIT ) ) {
 
 	} else {
 		
-		$c = array( 'executed_commits' => array(), 'pending_commits' => $WPT_COMMIT );
+		$c = array( 'executed_commits' => array(), 'pending_commits' => $WPT_COMMIT, 'testing_commit' => $testing_commit );
 
 		$c_json = json_encode( $c );
 		
@@ -156,11 +162,6 @@ if( count( $WPT_COMMIT ) ) {
 	}
 
 }
-
-
-exit;
-
-
 
 /**
  */
@@ -366,7 +367,51 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 
 			// Clone the WordPress develop repository from GitHub into the preparation directory.
 			// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
-			'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+			'git clone --depth=10 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+
+			'git config --add safe.directory ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+
+		) );
+
+		if( $WPT_COMMITS ) {
+
+			$commit_sha = null;
+			if( file_exists( __DIR__ . '/commits.json' ) ) {
+		
+				$c_array = json_decode( file_get_contents( __DIR__ . '/commits.json' ), true );
+				
+				if( isset( $c_array['testing_commit'] ) && count( $c_array['testing_commit'] ) ) {
+					
+					$commit_sha = $c_array['testing_commit'][0];
+
+				} else {
+
+					$commit_sha = array_shift($c_array['pending_commits']);
+
+					$c_array['testing_commit'][0] = $commit_sha;
+
+				}
+
+				$c_json = json_encode( $c_array );
+		
+				file_put_contents( __DIR__ . '/commits.json', $c_json );
+
+			}
+			
+			if( ! is_null( $commit_sha ) ) {
+				
+				perform_operations( array(
+
+					'cd ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+					'git checkout ' . $commit_sha
+
+				) );
+
+			}
+				
+		}
+
+		perform_operations( array(
 
 			// Download the WordPress importer plugin zip file to the specified plugins directory.
 			'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip' . $certificate_validation,
@@ -533,7 +578,51 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 
 		// Clone the WordPress develop repository from GitHub into the preparation directory.
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
-		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
+		'git clone --depth=10 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
+
+		'git config --add safe.directory ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+
+	) );
+
+	if( $WPT_COMMITS ) {
+
+		$commit_sha = null;
+		if( file_exists( __DIR__ . '/commits.json' ) ) {
+	
+			$c_array = json_decode( file_get_contents( __DIR__ . '/commits.json' ), true );
+			
+			if( isset( $c_array['testing_commit'] ) && count( $c_array['testing_commit'] ) ) {
+				
+				$commit_sha = $c_array['testing_commit'][0];
+
+			} else {
+
+				$commit_sha = array_shift($c_array['pending_commits']);
+
+				$c_array['testing_commit'][0] = $commit_sha;
+
+			}
+
+			$c_json = json_encode( $c_array );
+	
+			file_put_contents( __DIR__ . '/commits.json', $c_json );
+
+		}
+		
+		if( ! is_null( $commit_sha ) ) {
+			
+			perform_operations( array(
+
+				'cd ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
+				'git checkout ' . $commit_sha,
+
+			) );
+
+		}
+			
+	}
+
+	perform_operations( array(
 
 		// Download the WordPress importer plugin zip file to the specified plugins directory.
 		'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip' . $certificate_validation,
@@ -548,6 +637,11 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 
 	// Log a message indicating the start of the variable replacement process for configuration.
 	log_message( 'Replacing variables in wp-tests-config.php' );
+
+
+exit;
+
+
 
 	/**
 	 * Reads the contents of the WordPress test configuration sample file.
