@@ -22,6 +22,7 @@ check_required_env();
  * These variables are used to configure SSH connections, file paths, and
  * executable commands needed for setting up the test environment.
  */
+$WPT_LABEL          = trim( getenv( 'WPT_LABEL' ) ) ? : 'default';
 $WPT_PREPARE_DIR    = trim( getenv( 'WPT_PREPARE_DIR' ) );
 $WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
 $WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
@@ -50,6 +51,116 @@ switch( $WPT_DEBUG_INI ) {
 		break;
 }
 unset( $WPT_DEBUG_INI );
+
+
+/**
+ */
+$WPT_COMMITS_INI = getenv( 'WPT_COMMITS' );
+switch( $WPT_COMMITS_INI ) {
+	case 0:
+	case 'false':
+		$WPT_COMMITS = false;
+		break;
+	case 1:
+	case 'true':
+		$WPT_COMMITS = true;
+		break;
+	default:
+		$WPT_COMMITS = false;
+		break;
+}
+unset( $WPT_COMMITS_INI );
+
+$WPT_COMMIT = array();
+if( $WPT_COMMITS ) {
+
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, 'https://api.github.com/repos/WordPress/wordpress-develop/commits?per_page=10');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_USERAGENT, 'WordPress.org PHPUnit test tool');
+	$commits = curl_exec($ch);
+	curl_close($ch);
+
+	$commits_array = json_decode( $commits, true );
+	unset( $commits );
+	foreach ( $commits_array as $commit ) {
+		
+		$WPT_COMMIT[] = $commit['sha'];
+		
+		unset( $commit );
+	}
+	unset( $commits_array );
+
+}
+
+if( count( $WPT_COMMIT ) ) {
+	
+	if( file_exists( __DIR__ . '/commits.json' ) ) {
+		
+		$c_array = json_decode( file_get_contents( __DIR__ . '/commits.json' ), true );
+		
+		if( isset( $c_array['executed_commits'] ) ) {
+			$executed_commits = $c_array['executed_commits'];
+		} else {
+			$executed_commits = array();
+		}
+
+		if( isset( $c_array['pending_commits'] ) ) {
+			$pending_commits = $c_array['pending_commits'];
+		} else {
+			$pending_commits = array();
+		}
+
+		foreach ($executed_commits as $key => $commithash) {
+			if (!in_array($commithash, $WPT_COMMIT)) {
+				unset($executed_commits[$key]);
+			}
+			unset( $key, $commithash );
+		}
+
+		foreach ($pending_commits as $key => $commithash) {
+			if (!in_array($commithash, $WPT_COMMIT)) {
+				unset($pending_commits[$key]);
+			}
+			unset( $key, $commithash );
+		}
+
+		foreach ($WPT_COMMIT as $commithash) {
+			if (!in_array($commithash, $pending_commits) && !in_array($commithash, $executed_commits)) {
+				array_push($pending_commits, $commithash);
+			}
+			unset( $commithash );
+		}
+
+		$c = array( 'executed_commits' => $executed_commits, 'pending_commits' => $pending_commits );
+
+		unset( $executed_commits, $pending_commits );
+
+		$c_json = json_encode( $c );
+		
+		file_put_contents( __DIR__ . '/commits.json', $c_json );
+		
+		unset( $c, $c_json );
+
+
+	} else {
+		
+		$c = array( 'executed_commits' => array(), 'pending_commits' => $WPT_COMMIT );
+
+		$c_json = json_encode( $c );
+		
+		file_put_contents( __DIR__ . '/commits.json', $c_json );
+		
+		unset( $c, $c_json );
+
+	}
+
+}
+
+
+exit;
+
+
 
 /**
  */
@@ -151,6 +262,7 @@ if( extension_loaded( 'imagick' ) ) {
 	\$imagick_info = Imagick::queryFormats();
 }
 \$env = array(
+	'label'					 => '{$WPT_LABEL}',
 	'php_version'    => phpversion(),
 	'php_modules'    => array(),
 	'gd_info'        => \$gd_info,
