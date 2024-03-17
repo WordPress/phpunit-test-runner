@@ -133,7 +133,15 @@ if( count( $WPT_COMMIT ) ) {
 
 		foreach ($WPT_COMMIT as $commithash) {
 			if (!in_array($commithash, $pending_commits) && !in_array($commithash, $executed_commits)) {
-				array_push($pending_commits, $commithash);
+
+				if( ! count( $pending_commits ) ) {
+				
+					array_unshift($pending_commits, $commithash);
+				} else {
+					
+					array_push($pending_commits, $commithash);
+				}
+
 			}
 			unset( $commithash );
 		}
@@ -386,7 +394,7 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 
 				} else {
 
-					$commit_sha = array_shift($c_array['pending_commits']);
+					$commit_sha = array_pop($c_array['pending_commits']);
 
 					$c_array['testing_commit'][0] = $commit_sha;
 
@@ -402,8 +410,7 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 				
 				perform_operations( array(
 
-					'cd ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ),
-					'git checkout ' . $commit_sha
+					'cd ' . escapeshellarg( $WPT_PREPARE_DIR_MULTI ) . ' && git checkout ' . $commit_sha
 
 				) );
 
@@ -613,8 +620,7 @@ if( count( $WPT_PHP_EXECUTABLE_MULTI_ARRAY ) ) {
 			
 			perform_operations( array(
 
-				'cd ' . escapeshellarg( $WPT_PREPARE_DIR ),
-				'git checkout ' . $commit_sha,
+				'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && git checkout ' . $commit_sha,
 
 			) );
 
