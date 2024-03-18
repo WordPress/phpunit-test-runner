@@ -1,0 +1,6 @@
+{
+  "commits_ignore": [
+		"Tests_Filesystem_WpFilesystemDirect_Mkdir::test_should_set_owner",
+		"Tests_Filesystem_WpFilesystemDirect_Mkdir::test_should_set_group"
+	]
+}

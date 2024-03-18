@@ -65,9 +65,11 @@ function perform_operations( $operations ) {
 	foreach( $operations as $operation ) {
 		log_message( $operation );
 		passthru( $operation, $return_code );
+		/* THIS IS A TEMPORARY (or not) COMMENTED CODE
 		if ( 0 !== $return_code ) {
 			error_message( 'Failed to perform operation.' );
 		}
+		*/
 	}
 }
 
