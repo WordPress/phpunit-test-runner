@@ -126,7 +126,7 @@ perform_operations( array(
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
 
 	// Change directory to the preparation directory, install npm dependencies, and build the project.
-	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build'
+	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install -ddd && npm run build -ddd'
 
 ) );
 
@@ -135,7 +135,7 @@ log_message( 'Replacing variables in wp-tests-config.php' );
 
 /**
  * Reads the contents of the WordPress test configuration sample file.
- * This file contains template placeholders that need to be replaced with actual values 
+ * This file contains template placeholders that need to be replaced with actual values
  * from environment variables to configure the WordPress test environment.
  */
 $contents = file_get_contents( $WPT_PREPARE_DIR . '/wp-tests-config-sample.php' );
@@ -146,7 +146,7 @@ $contents = file_get_contents( $WPT_PREPARE_DIR . '/wp-tests-config-sample.php' 
  * It then collects various pieces of system information including PHP version, loaded PHP modules,
  * MySQL version, operating system details, and versions of key utilities like cURL and OpenSSL.
  * This information is collected in an array and written to a JSON file in the log directory.
- * Additionally, if running from the command line during a WordPress installation process, 
+ * Additionally, if running from the command line during a WordPress installation process,
  * it outputs the PHP version and executable path.
  */
 $system_logger = <<<EOT
@@ -276,7 +276,7 @@ file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
 $php_version_cmd = $WPT_PHP_EXECUTABLE . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
 
 /**
- * If an SSH connection string is provided, the command to determine the PHP version is modified 
+ * If an SSH connection string is provided, the command to determine the PHP version is modified
  * to execute remotely over SSH. This is required if the test environment is not the local machine.
  */
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
