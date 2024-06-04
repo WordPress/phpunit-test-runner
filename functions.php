@@ -242,6 +242,7 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 	curl_setopt( $process, CURLOPT_TIMEOUT, 30 );
 	curl_setopt( $process, CURLOPT_POST, 1 );
 	curl_setopt( $process, CURLOPT_CUSTOMREQUEST, 'POST' );
+	curl_setopt( $process, CURLOPT_USERAGENT, 'WordPress PHPUnit Test Runner' );
 	curl_setopt( $process, CURLOPT_POSTFIELDS, $data_string );
 	curl_setopt( $process, CURLOPT_RETURNTRANSFER, true );
 	curl_setopt( $process, CURLOPT_HTTPHEADER, array(
