@@ -43,7 +43,7 @@ jobs:
   test:
     name: Run Core PHPUnit tests
     runs-on: ubuntu-latest
-    
+
     # Remove this line if Github Actions is your preferred means of running the tests.
     if: ${{ false }}
 
@@ -75,7 +75,7 @@ jobs:
       - name: Install NodeJS
         uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
         with:
-          node-version: 14
+          node-version: 20
 
       - name: Prepare environment
         run: php prepare.php
