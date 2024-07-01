@@ -31,7 +31,7 @@ function check_required_env( $check_db = true ) {
 			continue;
 		}
 		if ( false === getenv( $var ) ) {
-			error_message( $var . ' must be set as an environment variable.' );
+			error_message( $var . ' must be set as an environment variable. Did you remember to execute \'source .env\' to load the environment variables?' );
 		}
 	}
 
