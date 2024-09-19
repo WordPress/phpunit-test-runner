@@ -49,7 +49,7 @@ jobs:
 
     env:
       # This is only a subset/example of env vars available. See the `.env.default` file for a full list.
-      WPT_PREPARE_DIR: './tmp/wp-test-runner'
+      WPT_PREPARE_DIR: 'tmp/wp-test-runner'
       WPT_TEST_DIR: 'wp-test-runner'
       # WPT_PREPARE_DIR: ${{ secrets.WPT_PREPARE_DIR }}
       # WPT_TEST_DIR: ${{ secrets.WPT_TEST_DIR }}
