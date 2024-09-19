@@ -109,6 +109,7 @@ if ( 'verbose' === $WPT_DEBUG ) {
  * the junit.xml files from the source to the destination directory.
  */
 $junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
+log_message($junit_exec);
 perform_operations( array(
 	$junit_exec,
 ) );
