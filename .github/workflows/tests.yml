@@ -91,4 +91,5 @@ jobs:
         continue-on-error: true
 
       - name: Cleanup
+        if: ${{ false }}
         run: php cleanup.php
