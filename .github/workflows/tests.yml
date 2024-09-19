@@ -80,11 +80,9 @@ jobs:
           node-version: 20
 
       - name: Prepare environment
-        if: ${{ false }}
         run: php prepare.php
 
       - name: Run unit tests
-        if: ${{ false }}
         run: php test.php
         # Prevent the workflow from stopping if there are test failures.
         continue-on-error: true
@@ -95,5 +93,4 @@ jobs:
         continue-on-error: true
 
       - name: Cleanup
-        if: ${{ false }}
         run: php cleanup.php
