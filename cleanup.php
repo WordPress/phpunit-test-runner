@@ -2,7 +2,7 @@
 /**
  * This script is responsible for cleaning up the test environment after a run of the WordPress PHPUnit Test Runner.
  * It ensures that temporary directories and files created during the test process are properly deleted.
- * 
+ *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
@@ -48,6 +48,6 @@ perform_operations( array(
  */
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	perform_operations( array(
-		'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
+		// 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
 	) );
 }
