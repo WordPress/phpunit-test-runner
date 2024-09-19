@@ -86,7 +86,7 @@ $junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*
  * remote path to ensure that the junit.xml results can be accessed or copied over SSH.
  */
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
+	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT ) . ':' . $junit_location;
 }
 
 /**
