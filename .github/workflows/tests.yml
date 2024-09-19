@@ -82,7 +82,6 @@ jobs:
           node-version: 20
 
       - name: Prepare environment
-        if: ${{ false }}
         run: php prepare.php
 
       - name: Run unit tests
