@@ -54,7 +54,7 @@ jobs:
       # WPT_PREPARE_DIR: ${{ secrets.WPT_PREPARE_DIR }}
       # WPT_TEST_DIR: ${{ secrets.WPT_TEST_DIR }}
       WPT_REPORT_API_KEY: ${{ secrets.WPT_REPORT_API_KEY }}
-      WPT_PHP_EXECUTABLE: /opt/cpanel/ea-php81/root/usr/bin/php
+      WPT_PHP_EXECUTABLE: /opt/cpanel/ea-php83/root/usr/bin/php
       # WPT_PHP_EXECUTABLE: ${{ secrets.WPT_PHP_EXECUTABLE }}
       # Database settings
       WPT_DB_NAME: ${{ secrets.WPT_DB_NAME }}
