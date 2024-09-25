@@ -44,6 +44,18 @@ jobs:
     name: Run Core PHPUnit tests
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - '/opt/cpanel/ea-php83/root/usr/bin/php'
+          - '/opt/cpanel/ea-php82/root/usr/bin/php'
+          - '/opt/cpanel/ea-php81/root/usr/bin/php'
+          - '/opt/cpanel/ea-php80/root/usr/bin/php'
+          - '/opt/cpanel/ea-php74/root/usr/bin/php'
+          - '/opt/cpanel/ea-php73/root/usr/bin/php'
+          - '/opt/cpanel/ea-php72/root/usr/bin/php'
+
     # Remove this line if Github Actions is your preferred means of running the tests.
     # if: ${{ false }}
 
@@ -54,7 +66,7 @@ jobs:
       # WPT_PREPARE_DIR: ${{ secrets.WPT_PREPARE_DIR }}
       # WPT_TEST_DIR: ${{ secrets.WPT_TEST_DIR }}
       WPT_REPORT_API_KEY: ${{ secrets.WPT_REPORT_API_KEY }}
-      WPT_PHP_EXECUTABLE: /opt/cpanel/ea-php83/root/usr/bin/php
+      WPT_PHP_EXECUTABLE: ${{ matrix.php }}
       # WPT_PHP_EXECUTABLE: ${{ secrets.WPT_PHP_EXECUTABLE }}
       # Database settings
       WPT_DB_NAME: ${{ secrets.WPT_DB_NAME }}
