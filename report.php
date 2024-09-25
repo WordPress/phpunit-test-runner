@@ -76,7 +76,7 @@ $message = trim( exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/
  * safely used in shell commands.
  */
 log_message('Copying junit.xml results');
-$junit_location = '/home1/sharerok/wp-test-runner/tests/phpunit/build/logs/*';
+$junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
 
 /**
  * Modifies the junit.xml results file path for a remote location if an SSH connection is available.
@@ -109,7 +109,6 @@ if ( 'verbose' === $WPT_DEBUG ) {
  * the junit.xml files from the source to the destination directory.
  */
 $junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
-log_message($junit_exec);
 perform_operations( array(
 	$junit_exec,
 ) );
