@@ -9,7 +9,7 @@ To use the Runner, the following is required:
 
 ## NodeJS installation
 
-If you are using Debian / Ubuntu, install or update NodeJS 18 with this command:
+If you are using Debian / Ubuntu, install or update NodeJS 20 with this command:
 
 ```
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
