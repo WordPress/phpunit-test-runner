@@ -185,7 +185,7 @@ if ( '' !== $WPT_PHP_EXECUTABLE_MULTI ) {
 
 	foreach( $php_multi_versions as $php_multi_version ) {
 
-		$php_multi_v = explode( '+', $php_multi_version );
+		$php_multi_v = explode( '=', $php_multi_version );
 
 		if( isset( $php_multi_v[0] ) && $php_multi_v[0] && isset( $php_multi_v[1] ) && $php_multi_v[1] ) {
 			$WPT_PHP_EXECUTABLE_MULTI_ARRAY[] = array( 'version' => trim( $php_multi_v[0] ), 'bin' => trim( $php_multi_v[1] ) );
