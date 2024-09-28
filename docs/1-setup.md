@@ -239,7 +239,7 @@ _majorversion1+binary_path1,majorversion2+binary_path2_
 
 something like:
 
-`8.0+/bin/php8.0,8.1+/bin/php8.1`
+`8.0=/bin/php8.0;8.1=/bin/php8.1`
 
 Use as much versions as you want, but it will take more time. The idea is to put all the versions offered to users.
 
