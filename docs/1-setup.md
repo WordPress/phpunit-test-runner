@@ -244,7 +244,7 @@ something like:
 Use as much versions as you want, but it will take more time. The idea is to put all the versions offered to users.
 
 ```
-export WPT_PHP_EXECUTABLE_MULTI=7.4+/bin/php7.4,8.3+/bin/php8.3
+export WPT_PHP_EXECUTABLE_MULTI=7.4=/bin/php7.4;8.3=/bin/php8.3
 ```
 
 **PHPUnit execution call**
