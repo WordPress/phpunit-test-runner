@@ -101,7 +101,7 @@ export WPT_TABLE_PREFIX=${WPT_TABLE_PREFIX-wptests_}
 # (Optionally) define the PHP executable to be called
 export WPT_PHP_EXECUTABLE=${WPT_PHP_EXECUTABLE-php}
 
-# (Optionally) array of versions (like: 8.0+/bin/php8.0,8.1+/bin/php8.1)
+# (Optionally) array of versions (like: 8.0=/bin/php8.0;8.1=/bin/php8.1)
 export WPT_PHP_EXECUTABLE_MULTI=
 
 # (Optionally) define the PHPUnit command execution call.
