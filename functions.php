@@ -23,14 +23,14 @@
  * @uses log_message() to log a success message when all checks pass.
  */
 function check_required_env( $check_db = true ) {
-	$required = array(
+	$required = [
 		'WPT_PREPARE_DIR',
 		'WPT_TEST_DIR',
 		'WPT_DB_NAME',
 		'WPT_DB_USER',
 		'WPT_DB_PASSWORD',
 		'WPT_DB_HOST',
-	);
+	];
 
 	foreach ( $required as $var ) {
 		if ( false === $check_db && 0 === strpos( $var, 'WPT_DB_' ) ) {
@@ -193,42 +193,42 @@ function process_junit_xml( $xml_string ) {
 	}
 
 	$xml     = simplexml_load_string( $xml_string ); // Parse the XML string.
-	$results = array();
+	$results = [];
 
 	$project = $xml->testsuite;
-	$results = array(
+	$results = [
 		'tests'    => (string) $project['tests'],
 		'failures' => (string) $project['failures'],
 		'errors'   => (string) $project['errors'],
 		'time'     => (string) $project['time'],
-	);
+	];
 
-	$results['testsuites'] = array();
+	$results['testsuites'] = [];
 
 	// XPath query to find test suites with failures or errors.
 	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( count( testcase ) > 0 ) and ( @errors > 0 or @failures > 0 ) ]' );
 	foreach ( $testsuites as $testsuite ) {
-		$result = array(
+		$result = [
 			'name'     => (string) $testsuite['name'],
 			'tests'    => (string) $testsuite['tests'],
 			'failures' => (string) $testsuite['failures'],
 			'errors'   => (string) $testsuite['errors']
-		);
+		];
 
 		// Only include suites with failures or errors.
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue; 
 		}
 
-		$failures = array();
+		$failures = [];
 		foreach ( $testsuite->testcase as $testcase ) {
 			// Capture both failure and error children.
-			foreach ( array( 'failure', 'error' ) as $key ) {
+			foreach ( [ 'failure', 'error' ] as $key ) {
 				if ( isset( $testcase->{$key} ) ) {
-				$failures[ (string) $testcase['name'] ] = array(
+				$failures[ (string) $testcase['name'] ] = [
 					'name' => (string) $testcase['name'],
 					$key   => (string) $testcase->{$key},
-				); }
+				]; }
 			}
 		}
 
@@ -288,12 +288,12 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
   $process = curl_init( $WPT_REPORT_URL ); // Initialize CURL.
 	$access_token = base64_encode( $api_key ); // Encode API key for Basic Auth.
 
-	$data = array(
+	$data = [
 		'results' => $results,
 		'commit'  => $rev,
 		'message' => $message,
 		'env'     => $env,
-	);
+	];
 
 	$data_string = json_encode( $data ); // Convert data to JSON format.
 
@@ -303,17 +303,17 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 	curl_setopt( $process, CURLOPT_CUSTOMREQUEST, 'POST' );
 	curl_setopt( $process, CURLOPT_POSTFIELDS, $data_string );
 	curl_setopt( $process, CURLOPT_RETURNTRANSFER, true );
-	curl_setopt( $process, CURLOPT_HTTPHEADER, array(
+	curl_setopt( $process, CURLOPT_HTTPHEADER, [
 		"Authorization: Basic $access_token", // Set Authorization header.
 		'Content-Type: application/json', // Specify content type.
 		'Content-Length: ' . strlen( $data_string ) // Set content length.
-	));
+	]);
 
 	$return = curl_exec( $process ); // Execute the request.
 	$status_code = curl_getinfo( $process, CURLINFO_HTTP_CODE ); // Get the HTTP status code.
 	curl_close( $process ); // Close CURL session.
 
-	return array( $status_code, $return ); // Return status code and response.
+	return [ $status_code, $return ]; // Return status code and response.
 }
 
 /**
@@ -343,17 +343,17 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
  * @uses class_exists() to check for the availability of the Imagick and Gmagick classes for version detection.
  */
 function get_env_details() {
-	$gd_info = array();
+	$gd_info = [];
 	if ( extension_loaded( 'gd' ) ) {
 		$gd_info = gd_info(); // Get GD info if the GD extension is loaded.
 	}
 
-	$imagick_info = array();
+	$imagick_info = [];
 	if ( extension_loaded( 'imagick' ) ) {
 		$imagick_info = Imagick::queryFormats(); // Get Imagick info if the Imagick extension is loaded.
 	}
 
-	$env = array(
+	$env = [
 		'php_version'   => phpversion(), // Current PHP version.
 		'php_modules'   => array(),
 		'gd_info'       => $gd_info,
@@ -362,23 +362,23 @@ function get_env_details() {
 		'system_utils'  => array(),
 		'os_name'       => trim( shell_exec( 'uname -s' ) ), // OS name.
 		'os_version'    => trim( shell_exec( 'uname -r' ) ), // OS version.
-	);
+	];
 
-	$php_modules = array(
+	$php_modules = [
 		'bcmath', 'ctype', 'curl', 'date', 'dom', 'exif', 'fileinfo', 'filter',
 		'ftp', 'gd', 'gettext', 'gmagick', 'hash', 'iconv', 'imagick', 'imap',
 		'intl', 'json', 'libsodium', 'libxml', 'mbstring', 'mcrypt', 'mod_xml',
 		'mysqli', 'mysqlnd', 'openssl', 'pcre', 'pdo_mysql', 'soap', 'sockets',
 		'sodium', 'xml', 'xmlreader', 'zip', 'zlib',
-	);
+	];
 
 	foreach ( $php_modules as $php_module ) {
 		$env['php_modules'][ $php_module ] = phpversion( $php_module ); // Get version for each PHP module.
 	}
 
 	$curl_bits = curl_version(); // Get CURL version info.
-	$env['system_utils']['curl'] = implode(' ', array_values(array_filter($curl_bits, function($k) {
-		return in_array($k, array('version', 'ssl_version', 'libz_version')); // Filter curl version info.
+	$env['system_utils']['curl'] = implode( ' ', array_values( array_filter( $curl_bits, function( $k ) {
+		return in_array( $k, [ 'version', 'ssl_version', 'libz_version'] ); // Filter curl version info.
 	}, ARRAY_FILTER_USE_KEY)));
 
 	// Check for MySQL version if connection details are available.
