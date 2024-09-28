@@ -181,7 +181,7 @@ if( count( $WPT_COMMIT ) ) {
 $WPT_PHP_EXECUTABLE_MULTI_ARRAY = array();
 if ( '' !== $WPT_PHP_EXECUTABLE_MULTI ) {
 
-	$php_multi_versions = explode( ',', $WPT_PHP_EXECUTABLE_MULTI );
+	$php_multi_versions = explode( ';', $WPT_PHP_EXECUTABLE_MULTI );
 
 	foreach( $php_multi_versions as $php_multi_version ) {
 
