@@ -27,8 +27,10 @@ With a direct Git clone, you can:
 ```bash
 # Copy the default .env file.
 cp .env.default .env
+
 # Edit the .env file to define your variables.
 vim .env
+
 # Load your variables into scope.
 source .env
 ```
@@ -47,8 +49,10 @@ Connect to a remote environment over SSH by having the CI job provision the SSH 
 ```bash
 # 1. Create a SSH key pair for the controller to use
 ssh-keygen -t rsa -b 4096 -C "travis@travis-ci.org"
+
 # 2. base64 encode the private key for use with the environment variable
 cat ~/.ssh/id_rsa | base64 --wrap=0
+
 # 3. Append id_rsa.pub to authorized_keys so the CI service can SSH in
 cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 ```
@@ -61,6 +65,7 @@ Host wpt
   Hostname 123.45.67.89
   User wpt
   Port 1234
+
 # 2. Use 'wpt' wherever you might normally use a SSH connection string
 ssh wpt
 ```
@@ -161,55 +166,69 @@ The content (in summary form) can be something like this:
 # $ source .env
 ###
 
-# Path to the directory where files can be prepared before being delivered to the environment.
-export WPT_PREPARE_DIR=/tmp/wp-test-runner
+# Label for the environment. Can be empty (default) or be like "shared", "vps",
+# "cloud" or similar. Please use only alphanumeric keywords, and try to be
+# descriptive
+export WPT_LABEL=""
 
-# Path to the directory where the WordPress develop checkout can be placed and tests can be run.
-# When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR
-export WPT_TEST_DIR=/tmp/wp-test-runner
+# Path to the directory where files can be prepared before being delivered to
+# the environment.
+export WPT_PREPARE_DIR="/tmp/wp-test-runner"
 
-# API key to authenticate with the reporting service in 'username:password' format.
-export WPT_REPORT_API_KEY=
+# Path to the directory where the WordPress develop checkout can be placed and
+# tests can be run. When running tests in the same environment, set WPT_TEST_DIR
+# to WPT_PREPARE_DIR
+export WPT_TEST_DIR="/tmp/wp-test-runner"
+
+# API key to authenticate with the reporting service in 'username:password'
+# format.
+export WPT_REPORT_API_KEY=""
 
 # (Optionally) define an alternate reporting URL
-export WPT_REPORT_URL=
+export WPT_REPORT_URL=""
 
 # Credentials for a database that can be written to and reset.
-# WARNING!!! This database will be destroyed between tests. Only use safe database credentials.
-# Please note that you must escape _or_ refrain from using # as special character in your credentials.
-export WPT_DB_NAME=
-export WPT_DB_USER=
-export WPT_DB_PASSWORD=
-export WPT_DB_HOST=
+# WARNING!!! This database will be destroyed between tests. Only use safe
+# database credentials. Please note that you must escape _or_ refrain from
+# using # as special character in your credentials.
+export WPT_DB_NAME=""
+export WPT_DB_USER=""
+export WPT_DB_PASSWORD=""
+export WPT_DB_HOST=""
 
-# (Optionally) set a custom table prefix to permit concurrency against the same database.
+# (Optionally) set a custom table prefix to permit concurrency against the same
+# database.
 export WPT_TABLE_PREFIX=${WPT_TABLE_PREFIX-wptests_}
 
 # (Optionally) define the PHP executable to be called
 export WPT_PHP_EXECUTABLE=${WPT_PHP_EXECUTABLE-php}
 
+# (Optionally) array of versions
+# like: "8.1=/bin/php8.1;8.2=/bin/php8.2;8.3=/bin/php8.3"
+export WPT_PHP_EXECUTABLE_MULTI=""
+
 # (Optionally) define the PHPUnit command execution call.
 # Use if `php phpunit.phar` can't be called directly for some reason.
-export WPT_PHPUNIT_CMD=
+export WPT_PHPUNIT_CMD=""
 
 # (Optionally) define the command execution to remove the test directory
 # Use if `rm -r` can't be called directly for some reason.
-export WPT_RM_TEST_DIR_CMD=
+export WPT_RM_TEST_DIR_CMD=""
 
 # SSH connection string (can also be an alias).
 # Leave empty if tests are meant to run in the same environment.
-export WPT_SSH_CONNECT=
+export WPT_SSH_CONNECT=""
 
 # Any options to be passed to the SSH connection
 # Defaults to '-o StrictHostKeyChecking=no'
-export WPT_SSH_OPTIONS=
+export WPT_SSH_OPTIONS=""
 
 # SSH private key, base64 encoded.
-export WPT_SSH_PRIVATE_KEY_BASE64=
+export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 # Output logging
 # Use 'verbose' to increase verbosity
-export WPT_DEBUG=
+export WPT_DEBUG=""
 
 # Certificate validation
 # Use 1 to validate, and 0 to not validate
@@ -218,7 +237,7 @@ export WPT_CERTIFICATE_VALIDATION=1
 # WordPress flavor
 # 0 = WordPress (simple version)
 # 1 = WordPress Multisite
-export WPT_FLAVOR=1
+export WPT_FLAVOR=0
 
 # Extra tests (groups)
 # 0 = none
@@ -226,6 +245,13 @@ export WPT_FLAVOR=1
 # 2 = ms-files
 # 3 = external-http
 export WPT_EXTRATESTS=0
+
+# Check all commits
+# 0 = latest
+# 1 = all
+export WPT_COMMITS=0
+
+
 ```
 
 Configure the folder where the WordPress software downloads and the database accesses will be made in order to prepare the tests.
@@ -290,7 +316,7 @@ If you follow these steps, everything should work perfectly and not make any mis
 Even if the test has failed, a report will be made. The first one shows the information about our environment. Among the most important elements are the extensions that are commonly used in WordPress and some utilities that are also generally useful.
 
 ```bash
-cat /tmp/wp-test-runner/tests/phpunit/build/logs/env.json
+cat /tmp/wp-test-runner-(hash)/tests/phpunit/build/logs/env.json
 ```
 
 The content of this file is somewhat similar to this:
@@ -328,7 +354,7 @@ The content of this file is somewhat similar to this:
 In addition to this report, a definitive file with all the information of what happened in the tests. This is the one that includes all the tests that are made (more than 10,000) giving information of the time that they take to be executed, problems that have arisen…
 
 ```bash
-cat /tmp/wp-test-runner/tests/phpunit/build/logs/junit.xml
+cat /tmp/wp-test-runner-(hash)/tests/phpunit/build/logs/junit.xml
 ```
 
 At this point we can generate the reports by sending them to WordPress.org, if necessary. Even if you haven’t included the WordPress user (see below for how to create it), you can still run this file.
