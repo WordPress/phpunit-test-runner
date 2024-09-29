@@ -1,3 +1,21 @@
+# About the PHPUnit Test Runner
+
+Hosting companies can have several to millions of websites hosted with WordPress, so it's important to make sure their configuration is as compatible as possible with the software.
+
+To verify this compatibility, the WordPress Community provides a series of PHPUnit tests with which to check the operation of WordPress in any environment.
+
+The Runner tests generates a report with the test results related to a bot user (a hosting company), and this captures and displays those test results at the [Host Test Result](https://make.wordpress.org/hosting/test-results/) page.
+
+## What's the phpunit-test-runner
+
+The [phpunit-test-runner](https://github.com/WordPress/phpunit-test-runner) is a tool designed to make it easier for hosting companies to run the WordPress project’s automated tests.
+
+There is a [whole documentation about this tool](https://make.wordpress.org/hosting/test-results-getting-started/). Also, if you want, you can make your test results appear in the [Host Test Results](https://make.wordpress.org/hosting/test-results/) page of WordPress.
+
+The tool can be run manually or through an automated system like Travis. To see how it works and the purpose of this document, will be shown how to run the tests manually.
+
+---
+
 # PHPUnit Test Runner
 
 Thanks for running the WordPress PHPUnit test suite on your infrastructure. We appreciate you helping to ensure WordPress’s compatibility for your users.
@@ -13,7 +31,7 @@ At a high level, the test suite runner:
 3. Reports the PHPUnit test results to WordPress.org
 4. Cleans up the test suite environment.
 
-## Setup
+## Quick setup
 
 The test suite runner can be used in one of two ways:
 
@@ -70,13 +88,9 @@ Host wpt
 ssh wpt
 ```
 
-## Running
+## Requirements
 
-The test suite runner is run in four steps. This explanation is for the local execution.
-
-### Requirements
-
-To use the Runner, the following is required (testing WordPress 6.5):
+To use the Runner, the following is required (testing WordPress 6.7-alpha):
 
 - Server / hosting (infrastructure) with the usual configuration you use
 - A database where you can test (tables will be created and destroyed several times)
@@ -91,9 +105,9 @@ Test environment:
 - Writable filesystem for the entire test directory (see [#40910](https://core.trac.wordpress.org/ticket/40910)).
 - Run with a non-root user, both for security and practical purposes (see [#44233](https://core.trac.wordpress.org/ticket/44233#comment:34)/[#46577](https://core.trac.wordpress.org/ticket/46577)).
 
-#### Database creation
+### Database creation
 
-_This is an example for MySQL / MariaDB._
+_This is a simple example for MySQL / MariaDB._
 
 ```sql
 CREATE DATABASE wordpressdatabase CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci;
@@ -102,9 +116,9 @@ GRANT ALL ON wordpressdatabase.* TO 'wordpressusername'@'127.0.0.1' IDENTIFIED B
 FLUSH PRIVILEGES;
 ```
 
-#### NodeJS installation
+### NodeJS installation
 
-_This is an example for Debian / Ubuntu._
+_This is a simple example for Debian / Ubuntu._
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -114,9 +128,9 @@ nodejs --version
 npm --version
 ```
 
-#### PHP Composer
+### PHP Composer
 
-_This is an example for Debian / Ubuntu._
+_This is a simple example for Debian / Ubuntu._
 
 ```bash
 curl -sS https://getcomposer.org/installer -o composer-setup.php
@@ -124,35 +138,37 @@ php composer-setup.php --install-dir=/usr/local/bin --filename=composer
 composer --version
 ```
 
-#### Git
+### Git
 
-_This is an example for Debian / Ubuntu._
+_This is a simple example for Debian / Ubuntu._
 
 ```bash
 apt -y install git
 git --version
 ```
 
-### Installing the Test Runner
+## Installing the Runner
 
-First, download the software. This example uses `/home/wptestrunner/` folder, but set the best for this environment.
+First, download the software. This example use `/home/wptestrunner/` folder, but set the best for this environment.
 
-```bash
+```
 cd /home/wptestrunner/
 git clone https://github.com/WordPress/phpunit-test-runner.git
 cd phpunit-test-runner/
 ```
 
+## Configuring the Runner
+
 The next step will be to configure the environment. To do this, make a copy of the example file and then configure it.
 
-```bash
+```
 cp .env.default .env
 vim .env
 ```
 
-The content (in summary form) can be something like this:
+This is the default configuraton file:
 
-```bash
+```
 ###
 # Configuration environment variables used by the test runner
 #
@@ -251,16 +267,204 @@ export WPT_EXTRATESTS=0
 # 1 = all
 export WPT_COMMITS=0
 
+````
 
+### Configuration file
+
+And this could be an example of each part:
+
+**Label**
+
+Label for the environment. Can be empty (default) or be like "shared", "vps", "cloud" or similar. Please use only alphanumeric keywords, and try to be descriptive
+
+```
+export WPT_LABEL="shared"
+```
+
+**Preparation directory**
+
+Path to the directory where files can be prepared before being delivered to the environment.
+
+Usually can be a /tmp/ folder so it does everything temporary. 
+
+```
+export WPT_PREPARE_DIR="/tmp/wp-test-runner"
+```
+
+**Test directory**
+
+Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally.
+
+
+```
+export WPT_TEST_DIR="/tmp/wp-test-runner"
+```
+
+**API KEY**
+
+API key to authenticate with the reporting service in 'username:password' format. This is only needed if you want to publish your results in the WordPress site, so data can help developers to improve WordPress.
+
+Read: [How to report: Creating your bot for WordPress.org](https://make.wordpress.org/hosting/handbook/tests/#how-to-report-creating-your-bot-for-wordpress-org)
+
+```
+export WPT_REPORT_API_KEY="userbot:12345ABCDE67890F"
+```
+
+**Reporting URL**
+
+(Optionally) Define an alternate reporting URL, if you are running your own website.
+
+It should look like:
+`https://reporter.example.com/wp-json/wp-unit-test-api/v1/results`
+
+``` 
+export WPT_REPORT_URL="https://reporter.example.com/wp-json/wp-unit-test-api/v1/results"
+```
+
+**Database credentials**
+
+Credentials for a database that can be written to and reset.
+
+WARNING: This database will be destroyed between tests. Only use safe database credentials.
+
+Please note that you must escape _or_ refrain from using # as special character in your credentials.
+
+
+```
+export WPT_DB_NAME="testbot"
+export WPT_DB_USER="wpuser"
+export WPT_DB_PASSWORD="wppassword"
+export WPT_DB_HOST="localhost"
+```
+
+**Tables Custom prefix**
+
+(Optionally) Set a custom table prefix to allow concurrency against the same database. This is very useful if you activate the multi-php or multi-environment part.
+
+```
+export WPT_TABLE_PREFIX=${WPT_TABLE_PREFIX-wptests_}
+```
+
+**PHP versions**
+
+_There are two options for backward compatibility._
+
+The first one is the binary file / path for the default PHP. If it's empty it will use "php" as the command.
+
+```
+export WPT_PHP_EXECUTABLE=${WPT_PHP_EXECUTABLE-php}
+```
+
+The second one is the optional part. This allow to test more than one PHP versions. The format to use is:
+
+_majorversion1=binary_path1;majorversion2=binary_path2_
+
+or, something like:
+
+`8.1=/bin/php8.1;8.2=/bin/php8.2;8.3=/bin/php8.3`
+
+Use as much versions as you want, but it will take more time. The idea is to put all the versions offered to users.
+
+```
+export WPT_PHP_EXECUTABLE_MULTI="7.4=/bin/php7.4;8.3=/bin/php8.3"
+```
+
+**PHPUnit execution call**
+
+(Optionally) define the PHPUnit command execution call. Use if `php phpunit.phar` can't be called directly for some reason.
+
+```
+export WPT_PHPUNIT_CMD=""
+```
+
+**Remove directory command**
+
+(Optionally) define the command execution to remove the test directory. Use if `rm -r` can't be called directly for some reason.
+
+```
+export WPT_RM_TEST_DIR_CMD=""
+```
+
+**SSH connection**
+
+SSH connection string (can also be an alias). Leave empty if tests are meant to run in the same environment.
+
+```
+export WPT_SSH_CONNECT=""
+```
+
+**SSH connection options**
+
+Any options to be passed to the SSH connection. Defaults to `-o StrictHostKeyChecking=no`.
+
+```
+export WPT_SSH_OPTIONS=""
+```
+
+**SSH private key**
+
+SSH private key, base64 encoded.
+
+```
+export WPT_SSH_PRIVATE_KEY_BASE64=""
+```
+
+**Output logging**
+
+Output logging. Use 'verbose' to increase verbosity.
+
+```
+export WPT_DEBUG=""
+```
+
+**Certificate validation**
+
+TLS Certificate validation. Use `1` to validate, and `0` to not validate.
+
+This may be useful in some environments with OpenSSL limitations (usually local environments).
+
+```
+export WPT_CERTIFICATE_VALIDATION=0
+```
+
+**WordPress flavor**
+
+tests can check a simple WordPress installation or a WordPress Multisite installation. Pick your favor:
+
+Use `0` for a simple WordPress or `1` for a WordPress Multisite.
+
+```
+export WPT_FLAVOR=0
+```
+
+**Extra tests (groups)**
+
+- `0` = none
+- `1` = ajax
+- `2` = ms-files
+- `3` = external-http
+
+```
+export WPT_EXTRATESTS=0
+```
+
+**Commits**
+
+Check all commits or only the latest. testing only the latest may cause a gap on tests, because, some times, there are more than two tests in a few minutes (and the software is not so quick).
+
+By default, use `0` to check the latest, or `1` to test all the commits (the latest 10 commits).
+
+```
+export WPT_COMMITS=0
 ```
 
 Configure the folder where the WordPress software downloads and the database accesses will be made in order to prepare the tests.
 
-### Preparing the environment
+## Preparing the environment
 
 Before performing the first test, let’s update all the components. This process can be run before each test in this environment if wanted to keep it up to date, although it will depend more if it is in a production environment.
 
-```bash
+```
 cd /home/wptestrunner/phpunit-test-runner/
 git pull
 source .env
@@ -281,7 +485,7 @@ Now there is the environment ready, run the test preparation.
 php prepare.php
 ```
 
-The system will run a long series of installations, configurations and compilations of different elements in order to prepare the test. If warnings and warnings come out you should not worry too much, as it is quite normal. At the end of the process it will warn you if it needs something it doesn’t have. If it works, you should see something like this at the end:
+The system will run a long series of installations, configurations and compilations of different elements in order to prepare the test. If warnings and warnings come out you should not worry too much, as it is quite normal. At the end of the process it will warn you if it needs something it doesn't have. If it works, you should see something like this at the end:
 
 ```
 Success: Prepared environment.
@@ -289,7 +493,7 @@ Success: Prepared environment.
 
 Now that the environment has been prepared, the next step is to run the tests for the first time.
 
-### Running the test
+## Running the test
 
 Now that the environment is ready, let’s run the tests. To do this, execute the file that will perform it.
 
@@ -311,13 +515,15 @@ What do the symbols mean?
 
 If you follow these steps, everything should work perfectly and not make any mistakes. In case you get any error, it may be normal due to some missing adjustment or extension of PHP, among others. We recommend that you adjust the configuration until it works correctly. After all, this tool is to help you improve the optimal configuration for WordPress in that infrastructure.
 
-### Creating a report
+## Creating a report
 
 Even if the test has failed, a report will be made. The first one shows the information about our environment. Among the most important elements are the extensions that are commonly used in WordPress and some utilities that are also generally useful.
 
 ```bash
 cat /tmp/wp-test-runner-(hash)/tests/phpunit/build/logs/env.json
 ```
+
+_The hash (a CRC32) will depend on the PHP version you are using._
 
 The content of this file is somewhat similar to this:
 
@@ -351,11 +557,13 @@ The content of this file is somewhat similar to this:
 }
 ```
 
-In addition to this report, a definitive file with all the information of what happened in the tests. This is the one that includes all the tests that are made (more than 10,000) giving information of the time that they take to be executed, problems that have arisen…
+In addition to this report, a definitive file with all the information of what happened in the tests. This is the one that includes all the tests that are made (more than 20,000) giving information of the time that they take to be executed, problems that have arisen…
 
 ```bash
 cat /tmp/wp-test-runner-(hash)/tests/phpunit/build/logs/junit.xml
 ```
+
+_The hash (a CRC32) will depend on the PHP version you are using._
 
 At this point we can generate the reports by sending them to WordPress.org, if necessary. Even if you haven’t included the WordPress user (see below for how to create it), you can still run this file.
 
@@ -363,7 +571,7 @@ At this point we can generate the reports by sending them to WordPress.org, if n
 php report.php
 ```
 
-### Cleaning up the environment for other tests
+## Cleaning up the environment for other tests
 
 Having the tests working, all that remains is to delete all the files that have been created so that we can start over. To do this, execute the following command:
 
@@ -371,24 +579,64 @@ Having the tests working, all that remains is to delete all the files that have 
 php cleanup.php
 ```
 
-### Automatic running
+## Automatic running
 
-The best way to run this test is to create a cron that runs everything. Having in mind that the tests can overlap, the best way can be using a systemd timer.
+There are many ways to execute tests automatically. In many cases, it will depend on what you want to do and test.
+
+Keep in mind some aspects:
+
+- Tests usually take several minutes, but the system includes a mechanism to avoid repeating them. This can result in durations ranging from hours to seconds.
+- When configuring the system, ensure that tests do not overlap by implementing a system that prevents a test from being re-executed if it is already running.
+- Tests update their software. The configuration file is typically compatible with previous versions.
+
+Some suggestions:
+
+- Create a script (for example, in Bash) that includes all the steps to execute, including:
+	- Updating the Git branch
+	- Loading the configuration file
+	- Executing the 4 steps / PHP files.
+- Use a task scheduling system:
+  - Using cron
+  - Using systemd.timer
+
+### Script en Bash
+
+This is a simple example of a Bash script that could be placed in the directory above the software. For example, at `/home/wptestrunner/`.
 
 ```bash
-cat > /etc/systemd/system/wordpressphpunittestrunner.service << EOF
+cat > /home/wptestrunner/testrunner.sh << EOF
+cd /home/wptestrunner/phpunit-test-runner/
+git pull
+git checkout master
+source .env
+php prepare.php
+php test.php
+php report.php
+php cleanup.php
+EOF
+chmod +x /home/wptestrunner/testrunner.sh
+```
+
+From this moment on, if you run `bash /home/wptestrunner/testrunner.sh`, the test will execute once.
+
+### systemd timer
+
+The best way to run this test is to create a cron that runs everything. Having in mind that the tests can overlap, the best way can be using a systemd timer and the bash script.
+
+```bash
+cat > /etc/systemd/system/testrunner.service << EOF
 [Unit]
 Description=WordPress PHPUnit Test Runner
 [Service]
 Type=oneshot
-ExecStart=cd /home/wptestrunner/phpunit-test-runner/ && source .env && php prepare.php && php test.php && php report.php && php cleanup.php
+ExecStart=bash /home/wptestrunner/testrunner.sh
 User=wptestrunner
 Group=wptestrunner
 EOF
 ```
 
 ```bash
-cat > /etc/systemd/system/wordpressphpunittestrunner.timer << EOF
+cat > /etc/systemd/system/testrunner.timer << EOF
 [Unit]
 Description=WordPress PHPUnit Test Runner
 [Timer]
@@ -401,16 +649,16 @@ EOF
 
 ```bash
 systemctl daemon-reload
-systemctl enable wordpressphpunittestrunner.timer
-systemctl start wordpressphpunittestrunner.timer
-systemctl status wordpressphpunittestrunner.timer
+systemctl enable testrunner.timer
+systemctl start testrunner.timer
+systemctl status testrunner.timer
 ```
 
 If you want to check how is everything working...
 
 ```bash
-journalctl -u wordpressphpunittestrunner.timer
-journalctl -n 120 -u wordpressphpunittestrunner.service
+journalctl -u testrunner.timer
+journalctl -n 120 -u testrunner.service
 ```
 
 ## Contributing
