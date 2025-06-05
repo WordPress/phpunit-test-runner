@@ -68,6 +68,9 @@ runs:
         echo '${{ inputs.ssh-private-key }}' | base64 -d > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
     
+    # This is added as a separate step to catch SSH connection errors (bad
+    # credentials, or similar) early, since prepare.php takes a while before
+    # even attempting an SSH connection.
     - name: Test SSH connectivity
       shell: bash
       run: |
