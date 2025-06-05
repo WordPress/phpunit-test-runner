@@ -1,0 +1,139 @@
+name: WordPress Host Test
+description: >
+  Run the WordPress Host Test on a remote system reachable via SSH
+
+inputs:
+  report-api-key:
+    description: >
+      API key for reporting test results back to wordpress.org; if omitted,
+      test result reporting will be skipped.
+    required: false
+  remote-test-dir:
+    description: >
+      Remote directory in which tests will be run
+    required: true
+  database-host:
+    description: >
+      Database host for running the unit tests
+    required: true
+  database-user:
+    description: >
+      Database user for running the unit tests
+    required: true
+  database-password:
+    description: >
+      Database password for running the unit tests
+    required: true
+  database-name:
+    description: >
+      Database name for running the unit tests
+    required: true
+  ssh-connect:
+    description: >
+      SSH connection string (in the format username@host) for connecting to the
+      hosting environment under test.
+    required: true
+  ssh-private-key:
+    description: >
+      A base64-encoded SSH private key.
+    required: true
+  test-filter:
+    description: A regular expression to filter tests that should be run.
+    default: '.*'
+runs:
+  using: "composite"
+  steps:  
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: WordPress/phpunit-test-runner
+        path: runner
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@cf4cade2721270509d5b1c766ab3549210a39a2a # v2.33.0
+      with:
+        php-version: '8.4'
+        coverage: none
+
+    - name: Install NodeJS
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: 20
+    
+    - name: Prepare SSH private key
+      shell: bash
+      if: ${{ inputs.ssh-private-key }}
+      run: |
+        mkdir -p ~/.ssh
+        echo '${{ inputs.ssh-private-key }}' | base64 -d > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+    
+    # This is added as a separate step to catch SSH connection errors (bad
+    # credentials, or similar) early, since prepare.php takes a while before
+    # even attempting an SSH connection.
+    - name: Test SSH connectivity
+      shell: bash
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ inputs.ssh-connect }} whoami
+
+    - name: Prepare environment
+      env:
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
+      run: php prepare.php
+      shell: bash
+      working-directory: ./runner
+
+    - name: Run unit tests
+      run: php test.php
+      continue-on-error: true
+      shell: bash
+      working-directory: ./runner
+      env:
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
+        WPT_PHPUNIT_CMD: >
+          cd ${{ inputs.remote-test-dir }} && 
+          ./vendor/phpunit/phpunit/phpunit 
+          --dont-report-useless-tests 
+          -c tests/phpunit/multisite.xml
+          --filter '${{ inputs.test-filter }}'
+
+    - name: Report the results
+      run: php report.php
+      continue-on-error: true
+      if: ${{ inputs.report-api-key }}
+      shell: bash
+      working-directory: ./runner
+      env:
+        WPT_REPORT_API_KEY: ${{ inputs.report-api-key }}
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
+
+    - name: Cleanup
+      run: php cleanup.php
+      shell: bash
+      working-directory: ./runner
+      env:
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
