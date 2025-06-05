@@ -387,6 +387,55 @@ journalctl -u wordpressphpunittestrunner.timer
 journalctl -n 120 -u wordpressphpunittestrunner.service
 ```
 
+### Running using GitHub actions
+
+You can also use the GitHub action in `.github/actions/wordpress-host-test` to automatically run this test suite on your host. Since this action will usually run on GitHub's infrastructure, the action presumes that the actual hosting environment will be reachable via SSH.
+
+To run the GitHub action using a schedule, create a new GitHub repository with the following action:
+
+```yaml
+name: Run WordPress Unit Tests
+on:
+  schedule:
+    - cron: 0 0 * * *
+  workflow_dispatch:
+jobs:
+  run-tests:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: WordPress/phpunit-test-runner/.github/actions/wordpress-host-test@master
+        with:
+          report-api-key: '${{ secrets.REPORT_API_KEY }}'
+          ssh-connect: '${{ secrets.SSH_CONNECT }}'
+          ssh-private-key: '${{ secrets.SSH_PRIVATE_KEY }}'
+          remote-test-dir: /files/wordpress-host-test
+          database-host: ${{ secrets.DATABASE_HOST }}
+          database-user: ${{ secrets.DATABASE_USER }}
+          database-name: ${{ secrets.DATABASE_NAME }}
+          database-password: ${{ secrets.DATABASE_PASSWORD }}
+```
+
+The action also makes it easy to use matrix builds to run the same test suite across a whole matrix of different environments:
+
+```yaml
+name: Run WordPress Unit Tests
+on: # [...]
+jobs:
+  run-tests:
+    strategy:
+      matrix:
+        ssh-target:
+          - user@php-8.4-host.example
+          - user@php-8.3-host.example
+          - user@php-8.2-host.example
+    steps:
+      - uses: WordPress/phpunit-test-runner/.github/actions/wordpress-host-test@master
+        with:
+          ssh-connect: '${{ matrix.ssh-target }}'
+          # ...
+```
+
 ## Contributing
 
 If you have questions about the process or run into test failures along the way, please [open an issue in the project repository](https://github.com/WordPress/phpunit-test-runner/issues) and we’ll help diagnose/get the documentation updated. Alternatively, you can also pop into the `#hosting` channel on [WordPress.org Slack](https://make.wordpress.org/chat/) for help.
