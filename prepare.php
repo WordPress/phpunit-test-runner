@@ -126,7 +126,16 @@ perform_operations( array(
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
 
 	// Change directory to the preparation directory, install npm dependencies, and build the project.
-	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build'
+	/// 'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build',
+
+	// Install NPM but skip the css and js build step
+	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && npm install && bash patch_gruntfile.sh Gruntfile.js && npm run build --force',
+
+	// Refresh nightly
+	'mkdir -p ' . escapeshellarg( $WPT_CORE_NIGHTLY_DIR ) . ' && cd ' . escapeshellarg( $WPT_CORE_NIGHTLY_DIR ) . ' && wp-cli core download --force --version=nightly',
+
+	// Now rsync the CSS and JS files from nightly
+	'cd ' . escapeshellarg( $WPT_CORE_NIGHTLY_DIR ) . ' && rsync -zarv --include="*/" --include="*.js" --include="*.css" --exclude="*" --include="*.js" --include="*.css" . '.. escapeshellarg( $WPT_PREPARE_DIR ) . '/build',
 
 ) );
 
