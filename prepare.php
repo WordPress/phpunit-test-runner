@@ -107,7 +107,7 @@ if( ! $WPT_CERTIFICATE_VALIDATION ) {
 
 /**
  * Performs a series of operations to set up the test environment. This includes creating a preparation directory,
- * cloning the WordPress development repository, downloading the WordPress importer plugin, and preparing the environment with npm.
+ * cloning the WordPress development repository, and preparing the environment with npm.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations( array(
@@ -118,12 +118,6 @@ perform_operations( array(
 	// Clone the WordPress develop repository from GitHub into the preparation directory.
 	// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
-
-	// Download the WordPress importer plugin zip file to the specified plugins directory.
-	'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/wordpress-importer.zip' ) . ' https://downloads.wordpress.org/plugin/wordpress-importer.zip' . $certificate_validation,
-
-	// Change directory to the plugin directory, unzip the WordPress importer plugin, and remove the zip file.
-	'cd ' . escapeshellarg( $WPT_PREPARE_DIR . '/tests/phpunit/data/plugins/' ) . '; unzip wordpress-importer.zip; rm wordpress-importer.zip',
 
 	// Change directory to the preparation directory, install npm dependencies, and build the project.
 	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build'
