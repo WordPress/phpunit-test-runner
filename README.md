@@ -76,7 +76,7 @@ To use the Runner, the following is required (testing WordPress 6.5):
 - Server / hosting (infrastructure) with the usual configuration you use
 - A database where you can test (tables will be created and destroyed several times)
 - PHP 7.2+
-- MySQL 5.5+ / MariaDB 10.0+
+- MySQL 5.5.5+ / MariaDB 10.0+
 - NodeJS 20.x / npm 10.x / grunt
 - PHP Composer
 - Git, RSync, WGet, UnZip
