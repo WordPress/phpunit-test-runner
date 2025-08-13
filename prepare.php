@@ -304,13 +304,13 @@ if ( $retval !== 0 ) {
 log_message( 'Environment PHP Version: ' . $env_php_version );
 
 /**
- * Checks if the detected PHP version is below 7.0.
- * The test runner requires PHP version 7.0 or above, and if the environment's PHP version
+ * Checks if the detected PHP version is below 7.2.
+ * The test runner requires PHP version 7.2 or above, and if the environment's PHP version
  * is lower, it logs an error message and could terminate the script.
  */
-if ( version_compare( $env_php_version, '7.0', '<' ) ) {
-	// Logs an error message indicating the test runner's incompatibility with PHP versions below 7.0.
-	error_message( 'The test runner is not compatible with PHP < 7.0.' );
+if ( version_compare( $env_php_version, '7.2', '<' ) ) {
+	// Logs an error message indicating the test runner's incompatibility with PHP versions below 7.2.
+	error_message( 'The test runner is not compatible with PHP < 7.2.' );
 }
 
 /**
