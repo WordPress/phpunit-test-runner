@@ -90,7 +90,7 @@ ssh wpt
 
 ## Requirements
 
-To use the Runner, the following is required (testing WordPress 6.7-alpha):
+To use the Runner, the following is required to test WordPress version 6.6 or later:
 
 - Server / hosting (infrastructure) with the usual configuration you use
 - A database where you can test (tables will be created and destroyed several times)
@@ -99,6 +99,8 @@ To use the Runner, the following is required (testing WordPress 6.7-alpha):
 - NodeJS 20.x / npm 10.x / grunt
 - PHP Composer
 - Git, RSync, WGet, UnZip
+
+A full list of compatible versions of PHP for each version of WordPress [can be found in the WordPress Core Handbook](https://make.wordpress.org/core/handbook/references/php-compatibility-and-wordpress-versions/).
 
 Test environment:
 
