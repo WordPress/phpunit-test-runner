@@ -1,25 +1,27 @@
 <?php
 /**
  * Executes the PHPUnit test suite within the WordPress testing environment.
- * This script is designed to run tests either locally or on a remote server based on the environment setup.
- * It dynamically constructs the command to run PHPUnit and then executes it.
- * 
+ * This script is designed to run tests either locally or on a remote server
+ * based on the environment setup. It dynamically constructs the command to run
+ * PHPUnit and then executes it.
+ *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
+ *
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
 
 /**
- * Check for the presence of required environment variables.
- * This function should be defined in functions.php and should throw an
- * exception or exit if any required variables are missing.
+ * Check for the presence of required environment variables. This function
+ * should be defined in functions.php and should throw an exception or exit if
+ * any required variables are missing.
  */
 check_required_env();
 
 /**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
+ * Retrieves environment variables and sets defaults for test preparation. These
+ * variables are used to configure SSH connections, file paths, and executable
+ * commands needed for setting up the test environment.
  */
 $WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
 $WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );

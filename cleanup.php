@@ -1,24 +1,26 @@
 <?php
 /**
- * This script is responsible for cleaning up the test environment after a run of the WordPress PHPUnit Test Runner.
- * It ensures that temporary directories and files created during the test process are properly deleted.
- * 
+ * This script is responsible for cleaning up the test environment after a run
+ * of the WordPress PHPUnit Test Runner. It ensures that temporary directories
+ * and files created during the test process are properly deleted.
+ *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
+ *
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
 
 /**
- * Check for the presence of required environment variables.
- * This function should be defined in functions.php and should throw an
- * exception or exit if any required variables are missing.
+ * Check for the presence of required environment variables. This function
+ * should be defined in functions.php and should throw an exception or exit if
+ * any required variables are missing.
  */
 check_required_env();
 
 /**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
+ * Retrieves environment variables and sets defaults for test preparation. These
+ * variables are used to configure SSH connections, file paths, and executable
+ * commands needed for setting up the test environment.
  */
 $WPT_PREPARE_DIR     = trim( getenv( 'WPT_PREPARE_DIR' ) );
 $WPT_SSH_CONNECT     = trim( getenv( 'WPT_SSH_CONNECT' ) );
@@ -44,7 +46,9 @@ perform_operations( array(
  * This conditional block checks if an SSH connection string is provided and is not empty.
  * If a connection string is present, it triggers a cleanup operation on the remote environment.
  * The cleanup operation is executed by the `perform_operations` function which takes an array
- * of shell commands as its input.
+ * Performs a series of operations to clean up the test environment.
+ * This includes deleting specific directories and, if provided, cleaning up
+ * remote directories via SSH.
  */
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	perform_operations( array(

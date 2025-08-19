@@ -1,26 +1,27 @@
 <?php
 /**
- * This script prepares the environment for WordPress unit tests.
- * It sets up the necessary variables and configurations based on the environment.
- * The script assumes that certain environment variables are set to configure SSH,
- * directories, and executables used in the test preparation process.
+ * This script prepares the environment for WordPress unit tests. It
+ * sets up the necessary variables and configurations based on the environment.
+ * The script assumes that certain environment variables are set to configure
+ * SSH, directories, and executables used in the test preparation process.
  *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
+ *
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
 
 /**
- * Check for the presence of required environment variables.
- * This function should be defined in functions.php and should throw an
- * exception or exit if any required variables are missing.
+ * Check for the presence of required environment variables. This function
+ * should be defined in functions.php and should throw an exception or exit if
+ * any required variables are missing.
  */
 check_required_env();
 
 /**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
+ * Retrieves environment variables and sets defaults for test preparation. These
+ * variables are used to configure SSH connections, file paths, and executable
+ * commands needed for setting up the test environment.
  */
 $WPT_PREPARE_DIR    = trim( getenv( 'WPT_PREPARE_DIR' ) );
 $WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
@@ -30,8 +31,9 @@ $WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
 $WPT_CERTIFICATE_VALIDATION = trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) );
 
 /**
- * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
- * The debug mode can affect error reporting and other debug-related settings.
+ * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment
+ * variable. The debug mode can affect error reporting and other debug-related
+ * settings.
  */
 $WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
 switch( $WPT_DEBUG_INI ) {
@@ -106,8 +108,7 @@ if( ! $WPT_CERTIFICATE_VALIDATION ) {
 }
 
 /**
- * Performs a series of operations to set up the test environment. This includes creating a preparation directory,
- * cloning the WordPress development repository, downloading the WordPress importer plugin, and preparing the environment with npm.
+ * Sets up the SSH private key for use in the test environment if provided.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations( array(
@@ -134,9 +135,7 @@ perform_operations( array(
 log_message( 'Replacing variables in wp-tests-config.php' );
 
 /**
- * Reads the contents of the WordPress test configuration sample file.
- * This file contains template placeholders that need to be replaced with actual values 
- * from environment variables to configure the WordPress test environment.
+ * Don't validate the TLS certificate. Useful for local environments.
  */
 $contents = file_get_contents( $WPT_PREPARE_DIR . '/wp-tests-config-sample.php' );
 
@@ -146,7 +145,7 @@ $contents = file_get_contents( $WPT_PREPARE_DIR . '/wp-tests-config-sample.php' 
  * It then collects various pieces of system information including PHP version, loaded PHP modules,
  * MySQL version, operating system details, and versions of key utilities like cURL and OpenSSL.
  * This information is collected in an array and written to a JSON file in the log directory.
- * Additionally, if running from the command line during a WordPress installation process, 
+ * Additionally, if running from the command line during a WordPress installation process,
  * it outputs the PHP version and executable path.
  */
 $system_logger = <<<EOT
@@ -219,13 +218,13 @@ function curl_selected_bits(\$k) { return in_array(\$k, array('version', 'ssl_ve
 if ( class_exists( 'Imagick' ) ) {
 	\$imagick = new Imagick();
 	\$version = \$imagick->getVersion();
-	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$version );
-	\$env['system_utils']['imagemagick'] = \$version[1];
-} elseif ( class_exists( 'Gmagick' ) ) {
+	preg_match('/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$matches);
+	\$env['system_utils']['imagemagick'] = \$matches[1] ?? 'Unknown';
+} elseif (class_exists('Gmagick')) {
 	\$gmagick = new Gmagick();
-	\$version = \$gmagick->getversion();
-	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$version );
-	\$env['system_utils']['graphicsmagick'] = \$version[1];
+	\$version = \$gmagick->getVersion();
+	preg_match('/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$matches);
+	\$env['system_utils']['graphicsmagick'] = \$matches[1] ?? 'Unknown';
 }
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 //\$mysqli = new mysqli( WPT_DB_HOST, WPT_DB_USER, WPT_DB_PASSWORD, WPT_DB_NAME );
@@ -314,8 +313,8 @@ if ( version_compare( $env_php_version, '7.0', '<' ) ) {
 }
 
 /**
- * Use Composer to manage PHPUnit and its dependencies.
- * This allows for better dependency management and compatibility.
+ * Performs a series of operations to set up the test environment. This includes creating a preparation directory,
+ * cloning the WordPress development repository, downloading the WordPress importer plugin, and preparing the environment with npm.
  */
 
 // Check if Composer is installed and available in the PATH.
