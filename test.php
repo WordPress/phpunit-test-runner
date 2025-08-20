@@ -1,9 +1,9 @@
 <?php
 /**
- * Executes the PHPUnit test suite within the WordPress testing environment.
- * This script is designed to run tests either locally or on a remote server
- * based on the environment setup. It dynamically constructs the command to run
- * PHPUnit and then executes it.
+ * WordPress PHPUnit Test Runner: Test script
+ *
+ * This script executes the WordPress Core PHPUnit test suite within the
+ * prepared environment.
  *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  *
@@ -11,17 +11,19 @@
  */
 require __DIR__ . '/functions.php';
 
-/**
- * Check for the presence of required environment variables. This function
- * should be defined in functions.php and should throw an exception or exit if
- * any required variables are missing.
+/*
+ * Check for the presence of required environment variables.
+ *
+ * This function should be defined in functions.php and should throw an
+ * exception or exit if any required variables are missing.
  */
 check_required_env();
 
-/**
- * Retrieves environment variables and sets defaults for test preparation. These
- * variables are used to configure SSH connections, file paths, and executable
- * commands needed for setting up the test environment.
+/*
+ * Retrieve environment variables falling back to defaults.
+ *
+ * These variables are used to configure SSH connections, file paths, and
+ * executable commands needed for setting up the test environment.
  */
 $WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
 $WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
@@ -64,13 +66,7 @@ switch( $WPT_EXTRATESTS_INI ) {
 }
 unset( $WPT_EXTRATESTS_INI );
 
-/**
- * Determines the PHPUnit command to execute the test suite.
- * Retrieves the PHPUnit command from the environment variable 'WPT_PHPUNIT_CMD'. If the environment
- * variable is not set or is empty, it constructs a default command using the PHP executable path and
- * the test directory path from environment variables, appending parameters to the PHPUnit call to
- * avoid reporting useless tests.
- */
+// Construct the command used for running the PHPUnit tests.
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if( empty( $WPT_PHPUNIT_CMD ) ) {
 	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT;

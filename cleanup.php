@@ -1,8 +1,12 @@
 <?php
 /**
- * This script is responsible for cleaning up the test environment after a run
- * of the WordPress PHPUnit Test Runner. It ensures that temporary directories
- * and files created during the test process are properly deleted.
+ * WordPress PHPUnit Test Runner: Cleanup script
+ *
+ * This script is responsible for cleaning up the test environment after the
+ * Test Runner completes.
+ *
+ * All files and directories created by the test runner or the PHPUnit test
+ * suite are removed.
  *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  *
@@ -10,17 +14,19 @@
  */
 require __DIR__ . '/functions.php';
 
-/**
- * Check for the presence of required environment variables. This function
- * should be defined in functions.php and should throw an exception or exit if
- * any required variables are missing.
+/*
+ * Check for the presence of required environment variables.
+ *
+ * This function should be defined in functions.php and should throw an
+ * exception or exit if any required variables are missing.
  */
 check_required_env();
 
-/**
- * Retrieves environment variables and sets defaults for test preparation. These
- * variables are used to configure SSH connections, file paths, and executable
- * commands needed for setting up the test environment.
+/*
+ * Retrieve environment variables falling back to defaults.
+ *
+ * These variables are used to configure SSH connections, file paths, and
+ * executable commands needed for setting up the test environment.
  */
 $WPT_PREPARE_DIR     = trim( getenv( 'WPT_PREPARE_DIR' ) );
 $WPT_SSH_CONNECT     = trim( getenv( 'WPT_SSH_CONNECT' ) );
@@ -28,12 +34,17 @@ $WPT_SSH_OPTIONS     = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKey
 $WPT_TEST_DIR        = trim( getenv( 'WPT_TEST_DIR' ) );
 $WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR;
 
-/**
- * The directory path of the test preparation directory is assumed to be previously defined.
- * For example: $WPT_PREPARE_DIR = '/path/to/your/preparation/dir';
- * Clean up the preparation directory.
- * Forcefully deletes only the .git directory and the node_modules cache.
- * Afterward, the entire preparation directory is removed to ensure a clean state for the next test run.
+/*
+ * Clean up the test preparation directory.
+ *
+ * This ensures a clean slate the next time the test runner is executed.
+ *
+ * `WPT_PREPARE_DIR` will exist so long as prepare.php ran correctly.
+ *
+ * The following actions are performed:
+ * - Forcefully deletes only the .git directory and the node_modules cache.
+ * - Forcefully remove the `node_modules/.cache` directory.
+ * - Remove the entire preparation directory.
  */
 perform_operations( array(
 	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/.git' ),
@@ -41,14 +52,11 @@ perform_operations( array(
 	'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR ),
 ) );
 
-/**
- * Cleans up the test directory on a remote server.
- * This conditional block checks if an SSH connection string is provided and is not empty.
- * If a connection string is present, it triggers a cleanup operation on the remote environment.
- * The cleanup operation is executed by the `perform_operations` function which takes an array
- * Performs a series of operations to clean up the test environment.
- * This includes deleting specific directories and, if provided, cleaning up
- * remote directories via SSH.
+/*
+ * Clean up the test directory on a remote server.
+ *
+ * This ensures a clean slate on the remote server the next time the test
+ * runner is executed.
  */
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
 	perform_operations( array(

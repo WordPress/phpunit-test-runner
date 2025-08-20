@@ -1,16 +1,18 @@
 <?php
 /**
- * Validates the presence of essential environment variables necessary for the application to run correctly.
- * Specifically checks for variables related to directories and database configuration. It also ensures that
- * the test and preparation directories are the same when running locally without SSH connection requirements.
+ * Confirms the presence of required environment variables.
  *
- * This function will issue error messages through `error_message()` for any missing environment variables
- * and logs a message upon successful validation of all required variables.
+ * For the test runner to function correctly, a few requirements must be met:
+ * - A database configuration must be provided using the documented environment
+ *   variables.
+ * - The preparation and test directories must be the same when running
+ *   locally (not making use of an SSH connection).
  *
- * @param bool $check_db Optional. Whether to include database-related environment variables in the check. Defaults to true.
- *                       If set to false, database variables (prefixed with 'WPT_DB_') are not checked.
+ * @param bool $check_db Optional. Whether to confirm `WPT_DB_*` environment
+ *                       variables are present. Default true.
  *
- * @return void This function does not return a value but will halt execution if any required environment variable is missing.
+ * @return void This function does not return a value but will halt execution
+ *              if any required environment variable is missing.
  *
  * @uses getenv() to retrieve environment variable values.
  * @uses error_message() to display error messages for missing variables.
@@ -36,21 +38,21 @@ function check_required_env( $check_db = true ) {
 	}
 
 	if ( empty( getenv( 'WPT_SSH_CONNECT' ) )
-		&& getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
+	     && getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
 		error_message( 'WPT_TEST_DIR must be the same as WPT_PREPARE_DIR when running locally.' );
 	}
 
 	log_message( 'Environment variables pass checks.' );
 }
-
 /**
- * Executes a series of shell commands provided in the operations array. Each
- * operation is logged before execution. If any command fails (indicated by a
- * non-zero return code), an error message is displayed. This function is useful
- * for automating batch shell tasks within a PHP script, with error handling for
- * each operation.
+ * Executes a set of shell commands.
  *
- * @param array $operations An array of shell commands (strings) to be executed.
+ * Each command is logged before being executed.
+ *
+ * When a non-zero return code is encountered, the error message is displayed
+ * and the runner will fail.
+ *
+ * @param array $operations A list of shell commands (strings) to execute.
  * Each command should be a valid shell command and properly escaped for safety.
  * The commands are executed in the order they appear in the array.
  *
@@ -83,15 +85,12 @@ function perform_operations( $operations ) {
 }
 
 /**
- * Writes a message followed by a newline to the standard output (STDOUT). This
- * function is commonly used for logging purposes, providing feedback during
- * script execution, or debugging. The message is appended with the PHP
- * end-of-line constant (PHP_EOL) to ensure proper line breaks on different
- * operating systems.
+ * Writes a message to the standard output (STDOUT).
  *
- * @param string $message The message to be logged. This should be a string, and
- * it will be output exactly as provided, followed by a system-specific newline
- * character.
+ * The message is appended with PHP_EOL to ensure proper line breaks on
+ * different operating systems.
+ *
+ * @param string $message The message to be logged.
  *
  * @return void This function does not return a value. It directly writes the
  * message to STDOUT, which is typically visible in the console or terminal
@@ -106,11 +105,13 @@ function log_message( $message ) {
 }
 
 /**
- * Writes an error message prefixed with "Error: " to the standard error output
- * (STDERR) and terminates the script with a status code of 1. This function is
- * typically used to report errors during script execution. The message is
- * appended with the PHP end-of-line constant (PHP_EOL) to ensure it is properly
- * displayed on all operating systems.
+ * Displays an error message and terminates the test runner execution.
+ *
+ * The error message is prefixed with "Error: " and appended with PHP_EOL
+ * before being written to the standard output (STDOUT).
+ *
+ * After outputting the error message, the script will be terminated with a
+ * status code of 1.
  *
  * @param string $message The error message to be logged. This string will be
  * output as provided, but prefixed with "Error: " to indicate its nature,
@@ -130,12 +131,11 @@ function error_message( $message ) {
 }
 
 /**
- * Ensures a single trailing slash is present at the end of a given string. This
- * function first removes any existing trailing slashes from the input string to
- * avoid duplication and then appends a single slash. It's commonly used to
- * normalize file paths or URLs to ensure consistency in format, especially when
- * concatenating paths or performing file system operations that expect a
- * trailing slash.
+ * Ensures a single trailing slash is present at the end of a given string.
+ *
+ * File system operations often expect a single trailing slash when referring
+ * to directories or paths. This ensures that only one trailing slash is
+ * present at the end of a given string.
  *
  * @param string $string The input string to which a trailing slash will be
  * added. This could be a file path, URL, or any other string that requires a
@@ -155,14 +155,16 @@ function trailingslashit( $string ) {
 }
 
 /**
- * Parses JUnit XML formatted string to extract test results, focusing
- * specifically on test failures and errors.
- * The function converts the XML data into a structured JSON format that
- * summarizes the overall test outcomes, including the total number of tests,
- * failures, errors, and execution time. Only test suites and cases that contain
- * failures or errors are included in the final JSON output. This function is
- * useful for automated test result analysis, continuous integration reporting,
- * or any scenario where a quick summary of test failures and errors is needed.
+ * Extracts test results from a JUnit XML string.
+ *
+ * This extracts the relevant information from the test results into a format
+ * accepted and understood by the WordPress Test Reporter plugin.
+ *
+ * The data specifically extracted is:
+ * - Total number of tests.
+ * - Number of failures.
+ * - Number of errors.
+ * - Overall execution time.
  *
  * @param string $xml_string The JUnit XML data as a string. This should be
  * well-formed XML representing the results of test executions, typically
@@ -240,13 +242,13 @@ function process_junit_xml( $xml_string )
 }
 
 /**
- * Submits test results along with associated metadata to a specified reporting
- * API. The function constructs a POST request containing the test results, SVN
- * revision, SVN message, environment data, and uses an API key for
- * authentication. The reporting API's URL is retrieved from an environment
- * variable; if not found, a default URL is used. This function is typically
- * used to automate the reporting of test outcomes to a centralized system for
- * analysis, tracking, and historical record-keeping.
+ * Submits test results to a reporting API endpoint.
+ *
+ * This submits test results and related metadata to a site running the
+ * WordPress Test Reporter plugin using cURL.
+ *
+ * Reports are always submitted to WordPress.org Unless the WPT_REPORT_URL
+ * environment variable is set.
  *
  * @param string $results The test results in a processed format (e.g., JSON)
  * ready for submission to the reporting API.
@@ -314,30 +316,29 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 }
 
 /**
- * Collects and returns an array of key environment details relevant to the
- * application's context. This includes the PHP version, installed PHP modules
- * with their versions, system utilities like curl and OpenSSL versions, MySQL
- * version, and operating system details. This function is useful for diagnostic
- * purposes, ensuring compatibility, or for reporting system configurations in
- * debugging or error logs.
- * The function checks for the availability of specific PHP modules and system
- * utilities and captures their versions. It uses shell commands to retrieve
- * system information, which requires the PHP environment to have access to
- * these commands and appropriate permissions.
+ Collects details about the testing environment.
  *
- * @return array An associative array containing detailed environment information. The array includes:
- * - 'php_version': The current PHP version.
- * - 'php_modules': An associative array of selected PHP modules and their versions.
- * - 'system_utils': Versions of certain system utilities such as 'curl', 'imagemagick', 'graphicsmagick', and 'openssl'.
- * - 'mysql_version': The version of MySQL installed.
- * - 'os_name': The name of the operating system.
- * - 'os_version': The version of the operating system.
+ * The versions of PHP, PHP modules, database software, and system utilities
+ * can impact the results of the test suite. This gathers the relevant details
+ * to include in test report submissions.
+ *
+ * @return array An associative array containing detailed environment
+ *               information. The array includes:
+ *               - 'php_version': The current PHP version.
+ *               - 'php_modules': An associative array of selected PHP modules and their versions.
+ *               - 'system_utils': Versions of certain system utilities such as 'curl', 'imagemagick',
+ *                 'graphicsmagick', and 'openssl'.
+ *               - 'mysql_version': The version of MySQL installed.
+ *               - 'os_name': The name of the operating system.
+ *               - 'os_version': The version of the operating system.
  *
  * @uses phpversion() to get the PHP version and module versions.
  *
- * @uses shell_exec() to execute system commands for retrieving MySQL version, OS details, and versions of utilities like curl and OpenSSL.
+ * @uses shell_exec() to execute system commands for retrieving MySQL version,
+ *                    OS details, and versions of utilities like curl and OpenSSL.
  *
- * @uses class_exists() to check for the availability of the Imagick and Gmagick classes for version detection.
+ * @uses class_exists() to check for the availability of the Imagick and Gmagick
+ *                      classes for version detection.
  */
 function get_env_details() {
 
