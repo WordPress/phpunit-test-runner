@@ -26,6 +26,9 @@ $WPT_SSH_OPTIONS     = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKey
 $WPT_TEST_DIR        = trim( getenv( 'WPT_TEST_DIR' ) );
 $WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR;
 
+// Cleanup the Database.
+cleanup_db();
+
 /**
  * The directory path of the test preparation directory is assumed to be previously defined.
  * For example: $WPT_PREPARE_DIR = '/path/to/your/preparation/dir';
