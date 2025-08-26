@@ -58,7 +58,7 @@ jobs:
       WPT_DB_NAME: ${{ secrets.WPT_DB_NAME }}
       WPT_DB_USER: ${{ secrets.WPT_DB_USER }}
       WPT_DB_PASSWORD: ${{ secrets.WPT_DB_PASSWORD }}
-      WPT_DB_HOST: ${{ secrets.WPT_DB_HOST }}
+      WPT_DB_HOST: "${{ secrets.WPT_DB_HOST }}:${{ secrets.WPT_DB_PORT }}"
       # SSH settings for connecting to the test environment.
       WPT_SSH_CONNECT: ${{ secrets.WPT_SSH_CONNECT }}
       WPT_SSH_PRIVATE_KEY_BASE64: ${{ secrets.WPT_SSH_PRIVATE_KEY_BASE64 }}
