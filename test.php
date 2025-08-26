@@ -71,7 +71,7 @@ unset( $WPT_EXTRATESTS_INI );
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if ( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT;
+	$WPT_PHPUNIT_CMD = escapeshellarg( 'cd ' . $WPT_TEST_DIR . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT );
 } else {
 	$WPT_PHPUNIT_CMD = escapeshellarg( $WPT_PHPUNIT_CMD );
 }
