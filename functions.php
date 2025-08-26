@@ -44,6 +44,56 @@ function check_required_env( $check_db = true ) {
 }
 
 /**
+ * Parses environment variables used to configure the test runner.
+ *
+ * @return array[] {
+ *      Test runner configuration options.
+ *
+ *      @type array ...$0 {
+ *          An associative array of test runner configuration options.
+ *
+ *          @type string $WPT_TEST_DIR               Path to the directory where wordpress-develop is placed for testing
+ *                                                   after being prepared.
+ *          @type string $WPT_PREPARE_DIR            Path to the temporary directory where wordpress-develop is cloned
+ *                                                   and configured.
+ *          @type string $WPT_SSH_CONNECT            List of inner blocks. An array of arrays that
+ *                                                   have the same structure as this one.
+ *          @type string $WPT_SSH_OPTIONS            HTML from inside block comment delimiters.
+ *          @type string $WPT_PHP_EXECUTABLE         List of string fragments and null markers where
+ *                                                   inner blocks were found.
+ *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
+ *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
+ *          @type string $WPT_CERTIFICATE_VALIDATION List of string fragments and null markers where
+ *      }
+ *  }
+ */
+function setup_runner_env_vars() {
+	// Get test directory first as it's needed for the default rm command
+	$runner_configuration = array(
+		'WPT_TEST_DIR' => trim( getenv( 'WPT_TEST_DIR' ) ),
+	);
+
+	return array_merge(
+		$runner_configuration,
+		array(
+			// Directory configuration
+			'WPT_PREPARE_DIR'            => trim( getenv( 'WPT_PREPARE_DIR' ) ),
+			// SSH connection configuration
+			'WPT_SSH_CONNECT'            => trim( getenv( 'WPT_SSH_CONNECT' ) ),
+			'WPT_SSH_OPTIONS'            => trim( getenv( 'WPT_SSH_OPTIONS' ) ) ?: '-o StrictHostKeyChecking=no',
+			// Test execution configuration
+			'WPT_PHP_EXECUTABLE'         => trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ?: 'php',
+			// Cleanup configuration
+			'WPT_RM_TEST_DIR_CMD'        => trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ?: 'rm -r ' . $runner_configuration['WPT_TEST_DIR'],
+			// Reporting configuration
+			'WPT_REPORT_API_KEY'         => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
+			// Miscellaneous
+			'WPT_CERTIFICATE_VALIDATION' => trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) ),
+		)
+	);
+}
+
+/**
  * Executes a series of shell commands provided in the operations array. Each operation is logged before execution.
  * If any command fails (indicated by a non-zero return code), an error message is displayed. This function is
  * useful for automating batch shell tasks within a PHP script, with error handling for each operation.
