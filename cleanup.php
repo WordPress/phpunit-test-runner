@@ -42,6 +42,6 @@ perform_operations( array(
  */
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	perform_operations( array(
-		'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
+		'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
 	) );
 }
