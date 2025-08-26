@@ -70,7 +70,7 @@ if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
  */
 $rsync_options = '-r';
 
-if ( 'verbose' === $runner_vars['WPT_DEBUG'] ) {
+if ( $runner_vars['WPT_DEBUG'] ) {
 	$rsync_options = $rsync_options . 'v';
 }
 

@@ -54,7 +54,6 @@ function check_required_env( $check_db = true ) {
  *
  *          @type string $WPT_TEST_DIR               Path to the directory where wordpress-develop is placed for testing
  *                                                   after being prepared.
- *          @type string $WPT_DEBUG_MODE             Whether debug mode is enabled. Default false.
  *          @type string $WPT_PREPARE_DIR            Path to the temporary directory where wordpress-develop is cloned
  *                                                   and configured.
  *          @type string $WPT_SSH_CONNECT            List of inner blocks. An array of arrays that
@@ -65,6 +64,7 @@ function check_required_env( $check_db = true ) {
  *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
  *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
  *          @type string $WPT_CERTIFICATE_VALIDATION List of string fragments and null markers where
+ *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled. Default false.
  *      }
  *  }
  */
@@ -73,22 +73,6 @@ function setup_runner_env_vars() {
 	$runner_configuration = array(
 		'WPT_TEST_DIR' => trim( getenv( 'WPT_TEST_DIR' ) ),
 	);
-
-	$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
-	switch( $WPT_DEBUG_INI ) {
-		case 0:
-		case 'false':
-			$runner_configuration['WPT_DEBUG'] = false;
-			break;
-		case 1:
-		case 'true':
-		case 'verbose':
-			$runner_configuration['WPT_DEBUG'] = 'verbose';
-			break;
-		default:
-			$runner_configuration['WPT_DEBUG'] = false;
-			break;
-	}
 
 	return array_merge(
 		$runner_configuration,
@@ -106,6 +90,7 @@ function setup_runner_env_vars() {
 			'WPT_REPORT_API_KEY'         => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
 			// Miscellaneous
 			'WPT_CERTIFICATE_VALIDATION' => trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) ),
+			'WPT_DEBUG'                  => (bool) getenv( 'WPT_DEBUG' ),
 		)
 	);
 }
