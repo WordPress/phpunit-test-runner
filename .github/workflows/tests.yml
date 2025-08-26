@@ -92,6 +92,10 @@ jobs:
           terminus art wordpress
           terminus auth:login --machine-token=${{ secrets.TERMINUS_MACHINE_TOKEN }}
 
+      - name: Debug
+        run: |
+          terminus site:info ${{ secrets.PANTHEON_SITE_NAME }}
+
       - name: Prepare environment
         run: php prepare.php
 
