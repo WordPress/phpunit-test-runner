@@ -63,7 +63,7 @@ function check_required_env( $check_db = true ) {
  *                                                   inner blocks were found.
  *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
  *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
- *          @type string $WPT_CERTIFICATE_VALIDATION List of string fragments and null markers where
+ *          @type bool   $WPT_CERTIFICATE_VALIDATION Whether to validate TLS certificates. Default true.
  *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled. Default false.
  *      }
  *  }
@@ -89,7 +89,7 @@ function setup_runner_env_vars() {
 			// Reporting configuration
 			'WPT_REPORT_API_KEY'         => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
 			// Miscellaneous
-			'WPT_CERTIFICATE_VALIDATION' => trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) ),
+			'WPT_CERTIFICATE_VALIDATION' => (bool) trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) ),
 			'WPT_DEBUG'                  => (bool) getenv( 'WPT_DEBUG' ),
 		)
 	);
