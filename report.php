@@ -23,27 +23,6 @@ check_required_env( false );
 $runner_vars = setup_runner_env_vars();
 
 /**
- * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
- * The debug mode can affect error reporting and other debug-related settings.
- */
-$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
-switch( $WPT_DEBUG_INI ) {
-	case 0:
-	case 'false':
-		$WPT_DEBUG = false;
-		break;
-	case 1:
-	case 'true':
-	case 'verbose':
-		$WPT_DEBUG = 'verbose';
-		break;
-	default:
-		$WPT_DEBUG = false;
-		break;
-}
-unset( $WPT_DEBUG_INI );
-
-/**
  * Retrieves the SVN revision number from the git repository log.
  * Logs a message indicating the start of the SVN revision retrieval process.
  * Executes a shell command that accesses the git directory specified by the
@@ -91,7 +70,7 @@ if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
  */
 $rsync_options = '-r';
 
-if ( 'verbose' === $WPT_DEBUG ) {
+if ( 'verbose' === $runner_vars['WPT_DEBUG'] ) {
 	$rsync_options = $rsync_options . 'v';
 }
 

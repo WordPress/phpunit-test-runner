@@ -23,27 +23,6 @@ check_required_env();
 $runner_vars = setup_runner_env_vars();
 
 /**
- * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
- * The debug mode can affect error reporting and other debug-related settings.
- */
-$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
-switch( $WPT_DEBUG_INI ) {
-	case 0:
-	case 'false':
-		$WPT_DEBUG = false;
-		break;
-	case 1:
-	case 'true':
-	case 'verbose':
-		$WPT_DEBUG = 'verbose';
-		break;
-	default:
-		$WPT_DEBUG = false;
-		break;
-}
-unset( $WPT_DEBUG_INI );
-
-/**
  * Sets up the SSH private key for use in the test environment if provided.
  * The private key is expected to be in base64-encoded form in the environment variable 'WPT_SSH_PRIVATE_KEY_BASE64'.
  * It is decoded and saved to the user's .ssh directory as 'id_rsa'.
@@ -344,7 +323,7 @@ if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	$rsync_options = '-r';
 
 	// If debug mode is set to verbose, append 'v' to rsync options for verbose output.
-	if ( 'verbose' === $WPT_DEBUG ) {
+	if ( 'verbose' === $runner_vars['WPT_DEBUG'] ) {
 		$rsync_options = $rsync_options . 'v';
 	}
 
