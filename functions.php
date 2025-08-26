@@ -74,6 +74,16 @@ function setup_runner_env_vars() {
 		'WPT_TEST_DIR' => trim( getenv( 'WPT_TEST_DIR' ) ) ?: '/tmp/wp-test-runner',
 	);
 
+	/*
+	 * When no value is provided for WPT_CERTIFICATE_VALIDATION, assume that the default of true (validate certificates)
+	 * is desired.
+	 */
+	if ( false === getenv( 'WPT_CERTIFICATE_VALIDATION' ) ) {
+		$runner_configuration['WPT_CERTIFICATE_VALIDATION'] = true;
+	} else {
+		$runner_configuration['WPT_CERTIFICATE_VALIDATION'] = (bool) getenv( 'WPT_CERTIFICATE_VALIDATION' );
+	}
+
 	return array_merge(
 		$runner_configuration,
 		array(
@@ -89,7 +99,6 @@ function setup_runner_env_vars() {
 			// Reporting configuration
 			'WPT_REPORT_API_KEY'         => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
 			// Miscellaneous
-			'WPT_CERTIFICATE_VALIDATION' => (bool) trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) ),
 			'WPT_DEBUG'                  => (bool) getenv( 'WPT_DEBUG' ),
 		)
 	);
