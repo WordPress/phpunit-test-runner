@@ -76,7 +76,7 @@ $message = trim( exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/
  * safely used in shell commands.
  */
 log_message('Copying junit.xml results');
-$junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
+$junit_location = $WPT_TEST_DIR . '/tests/phpunit/build/logs/*';
 
 /**
  * Modifies the junit.xml results file path for a remote location if an SSH connection is available.
@@ -86,7 +86,7 @@ $junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*
  * remote path to ensure that the junit.xml results can be accessed or copied over SSH.
  */
 if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
+	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT ) . ':' . escapeshellarg( $junit_location );
 }
 
 /**
