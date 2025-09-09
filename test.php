@@ -17,14 +17,9 @@ require __DIR__ . '/functions.php';
 check_required_env();
 
 /**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
+ * Ensure that all environment variables are present with default values.
  */
-$WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
-$WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
+$runner_vars = setup_runner_env_vars();
 
 // Uses the flavor (usually to test WordPress Multisite)
 $WPT_FLAVOR_INI = trim( getenv( 'WPT_FLAVOR' ) );
@@ -71,14 +66,14 @@ unset( $WPT_EXTRATESTS_INI );
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if ( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = escapeshellarg( 'cd ' . $WPT_TEST_DIR . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT );
+	$WPT_PHPUNIT_CMD = escapeshellarg( 'cd ' . $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT );
 } else {
 	$WPT_PHPUNIT_CMD = escapeshellarg( $WPT_PHPUNIT_CMD );
 }
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	$WPT_PHPUNIT_CMD = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . $WPT_PHPUNIT_CMD;
+if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+	$WPT_PHPUNIT_CMD = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . $WPT_PHPUNIT_CMD;
 }
 
 // Execute the PHPUnit command.
