@@ -22,17 +22,10 @@ require __DIR__ . '/functions.php';
  */
 check_required_env();
 
-/*
- * Retrieve environment variables falling back to defaults.
- *
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
+/**
+ * Ensure that all environment variables are present with default values.
  */
-$WPT_PREPARE_DIR     = trim( getenv( 'WPT_PREPARE_DIR' ) );
-$WPT_SSH_CONNECT     = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_SSH_OPTIONS     = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
-$WPT_TEST_DIR        = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $WPT_TEST_DIR;
+$runner_vars = setup_runner_env_vars();
 
 /*
  * Clean up the test preparation directory.
@@ -47,9 +40,9 @@ $WPT_RM_TEST_DIR_CMD = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ? : 'rm -r ' . $W
  * - Remove the entire preparation directory.
  */
 perform_operations( array(
-	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/.git' ),
-	'rm -rf ' . escapeshellarg( $WPT_PREPARE_DIR . '/node_modules/.cache' ),
-	'rm -r ' . escapeshellarg( $WPT_PREPARE_DIR ),
+	'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
+	'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
+	'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 ) );
 
 /*
@@ -58,8 +51,8 @@ perform_operations( array(
  * This ensures a clean slate on the remote server the next time the test
  * runner is executed.
  */
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
+if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	perform_operations( array(
-		'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_RM_TEST_DIR_CMD ),
+		'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
 	) );
 }
