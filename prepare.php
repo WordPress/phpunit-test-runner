@@ -304,7 +304,7 @@ if ( $retval === 0 ) {
 	) );
 
 	// Update the command to use the downloaded Composer phar file.
-	$composer_cmd .= 'php composer.phar ';
+	$composer_cmd .= $WPT_PHP_EXECUTABLE . ' composer.phar ';
 }
 
 // Set the PHP version for Composer to ensure compatibility and update dependencies.
