@@ -65,13 +65,15 @@ unset( $WPT_EXTRATESTS_INI );
  * avoid reporting useless tests.
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
-if( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT;
+if ( empty( $WPT_PHPUNIT_CMD ) ) {
+	$WPT_PHPUNIT_CMD = escapeshellarg( 'cd ' . $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT );
+} else {
+	$WPT_PHPUNIT_CMD = escapeshellarg( $WPT_PHPUNIT_CMD );
 }
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	$WPT_PHPUNIT_CMD = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $WPT_PHPUNIT_CMD );
+	$WPT_PHPUNIT_CMD = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . $WPT_PHPUNIT_CMD;
 }
 
 // Execute the PHPUnit command.
