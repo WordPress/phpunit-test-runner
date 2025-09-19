@@ -36,7 +36,7 @@ switch( $WPT_FLAVOR_INI ) {
 }
 unset( $WPT_FLAVOR_INI );
 
-// Uses the flavor (usually to test WordPress Multisite)
+// Uses the extra tests group (e.g., ajax, ms-files, external-http)
 $WPT_EXTRATESTS_INI = trim( getenv( 'WPT_EXTRATESTS' ) );
 switch( $WPT_EXTRATESTS_INI ) {
 	case 0:
@@ -62,7 +62,7 @@ unset( $WPT_EXTRATESTS_INI );
  * Retrieves the PHPUnit command from the environment variable 'WPT_PHPUNIT_CMD'. If the environment
  * variable is not set or is empty, it constructs a default command using the PHP executable path and
  * the test directory path from environment variables, appending parameters to the PHPUnit call to
- * avoid reporting useless tests.
+ * Avoid reporting useless tests.
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if( empty( $WPT_PHPUNIT_CMD ) ) {
