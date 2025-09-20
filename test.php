@@ -62,7 +62,7 @@ unset( $WPT_EXTRATESTS_INI );
  * Retrieves the PHPUnit command from the environment variable 'WPT_PHPUNIT_CMD'. If the environment
  * variable is not set or is empty, it constructs a default command using the PHP executable path and
  * the test directory path from environment variables, appending parameters to the PHPUnit call to
- * Avoid reporting useless tests.
+ * avoid reporting useless tests.
  */
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if( empty( $WPT_PHPUNIT_CMD ) ) {
