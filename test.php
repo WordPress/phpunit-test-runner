@@ -36,7 +36,7 @@ switch( $WPT_FLAVOR_INI ) {
 }
 unset( $WPT_FLAVOR_INI );
 
-// Uses the flavor (usually to test WordPress Multisite)
+// Uses the extra tests group (e.g., ajax, ms-files, external-http)
 $WPT_EXTRATESTS_INI = trim( getenv( 'WPT_EXTRATESTS' ) );
 switch( $WPT_EXTRATESTS_INI ) {
 	case 0:
