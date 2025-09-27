@@ -63,7 +63,6 @@ function check_required_env( $check_db = true ) {
  *                                                   inner blocks were found.
  *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
  *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
- *          @type bool   $WPT_CERTIFICATE_VALIDATION Whether to validate TLS certificates. Default true.
  *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled.
  *      }
  *  }
@@ -74,15 +73,7 @@ function setup_runner_env_vars() {
 		'WPT_TEST_DIR' => trim( getenv( 'WPT_TEST_DIR' ) ) ?: '/tmp/wp-test-runner',
 	);
 
-	/*
-	 * When no value is provided for WPT_CERTIFICATE_VALIDATION, assume that the default of true (validate certificates)
-	 * is desired.
-	 */
-	if ( false === getenv( 'WPT_CERTIFICATE_VALIDATION' ) ) {
-		$runner_configuration['WPT_CERTIFICATE_VALIDATION'] = true;
-	} else {
-		$runner_configuration['WPT_CERTIFICATE_VALIDATION'] = (bool) getenv( 'WPT_CERTIFICATE_VALIDATION' );
-	}
+
 
 	return array_merge(
 		$runner_configuration,
