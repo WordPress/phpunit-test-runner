@@ -68,14 +68,6 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 
 }
 
-/**
- * Don't validate the TLS certificate
- * Useful for local environments
- */
-$certificate_validation = '';
-if( ! $runner_vars['WPT_CERTIFICATE_VALIDATION'] ) {
-	$certificate_validation .= ' --no-check-certificate';
-}
 
 /**
  * Performs a series of operations to set up the test environment. This includes creating a preparation directory,
