@@ -320,11 +320,25 @@ if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	}
 
 	// Perform the rsync operation with the configured options and exclude patterns.
-	// This operation synchronizes the test environment with the prepared files, excluding version control directories
-	// and other non-essential files for test execution.
-	perform_operations( array(
-		'rsync ' . $rsync_options . ' --exclude=".git/" --exclude="node_modules/" --exclude="composer.phar" -e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" ' . escapeshellarg( trailingslashit( $runner_vars['WPT_PREPARE_DIR'] )  ) . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $runner_vars['WPT_TEST_DIR'] ),
-	) );
+	// This operation synchronizes the test environment with the prepared files, excluding
+	// version control directories and other non-essential files for test execution.
+	perform_operations(
+		array(
+			'rsync ' . $rsync_options
+				. ' --exclude=".git/"'
+				. ' --exclude="node_modules/"'
+				. ' --exclude="composer.phar"'
+				. ' --exclude=".cache/"'
+				. ' --exclude=".devcontainer/"'
+				. ' --exclude=".github/"'
+				. ' --exclude="tools/"'
+				// Exclude all subdirectories in tests/ except phpunit/.
+				. ' --exclude="tests/*" --include="tests/phpunit/**"'
+				. ' -e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" '
+				. escapeshellarg( trailingslashit( $runner_vars['WPT_PREPARE_DIR'] ) )
+				. ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $runner_vars['WPT_TEST_DIR'] ),
+		)
+	);
 }
 
 // Log a success message indicating that the environment has been prepared.
