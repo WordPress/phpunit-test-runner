@@ -1,0 +1,17 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: wporg-phpunit-test-runner
+  description: Runs WordPress core hosting tests for WordPress.org hosting test results listing
+  annotations:
+    github.com/project-slug: pantheon-systems/wporg-phpunit-test-runner
+  tags:
+    - wordpress
+    - testing
+    - phpunit
+    - hosting
+spec:
+  type: tool
+  lifecycle: production
+  owner: devrel
