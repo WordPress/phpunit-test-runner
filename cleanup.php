@@ -20,6 +20,9 @@ check_required_env();
  */
 $runner_vars = setup_runner_env_vars();
 
+// Cleanup the Database.
+cleanup_db();
+
 /**
  * The directory path of the test preparation directory is assumed to be previously defined.
  * For example: $runner_vars['WPT_PREPARE_DIR'] = '/path/to/your/preparation/dir';
