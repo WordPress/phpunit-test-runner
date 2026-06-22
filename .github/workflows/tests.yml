@@ -24,77 +24,109 @@ on:
     branches:
       - main
    workflow_dispatch:
+     inputs:
+       test_group:
+         description: 'Run only tests in this @group. Defaults to full suite.'
+         required: false
+         default: ''
+         type: choice
+         options:
+           - ''
+           - actions
+           - canonical
+           - comment
+           - cron
+           - db
+           - feed
+           - filters
+           - formatting
+           - http
+           - image
+           - l10n
+           - media
+           - ms-site
+           - option
+           - post
+           - query
+           - rest-api
+           - rewrite
+           - taxonomy
+           - themes
+           - upload
+           - user
+           - utf8
+       test_filter:
+         description: 'PHPUnit --filter pattern — matches against class and method names. Examples: Tests_DB, Tests_Options, Tests_Post_Types::test_register. Overrides test_group if set.'
+         required: false
+         default: ''
 
-# Cancels all previous workflow runs for pull requests that have not completed.
+# Only one run at a time — prevents simultaneous runs from conflicting
+# over the same wptests_* tables on the shared Pantheon environment.
 concurrency:
-  # The concurrency group contains the workflow name and the branch name for pull requests
-  # or the commit hash for any other events.
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
-  # Tests the PHPUnit test runner.
+  # Runs the WordPress PHPUnit test suite on the Pantheon environment via Terminus.
   #
-  # Performs the following steps:
-  # - Checks out the repository.
-  # - Installs PHP.
-  # - Installs NodeJS 14 with caching configured.
-  # - Prepares the environment for tests.
-  # - Runs the tests.
-  # - Reports the results.
-  # - Cleans up.
+  # Flow:
+  # 1. Prepare: git clone wordpress-develop locally, rsync to Pantheon, run composer on Pantheon.
+  # 2. Test: run PHPUnit on Pantheon via terminus remote:wp eval --skip-wordpress.
+  # 3. Report: rsync results from Pantheon, upload to WordPress.org.
+  # 4. Cleanup: remove test dir on Pantheon and locally.
   test:
     name: Run Core PHPUnit tests
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
     env:
-      # This is only a subset/example of env vars available. See the `.env.default` file for a full list.
       WPT_PREPARE_DIR: ${{ secrets.WPT_PREPARE_DIR }}
       WPT_TEST_DIR: ${{ secrets.WPT_TEST_DIR }}
       WPT_REPORT_API_KEY: ${{ secrets.WPT_REPORT_API_KEY }}
-      WPT_PHP_EXECUTABLE: ${{ secrets.WPT_PHP_EXECUTABLE }}
-      # Database settings
-      WPT_DB_NAME: ${{ secrets.WPT_DB_NAME }}
-      WPT_DB_USER: ${{ secrets.WPT_DB_USER }}
-      WPT_DB_PASSWORD: ${{ secrets.WPT_DB_PASSWORD }}
-      WPT_DB_HOST: "${{ secrets.WPT_DB_HOST }}:${{ secrets.WPT_DB_PORT }}"
-      # SSH settings for connecting to the test environment.
-      WPT_SSH_CONNECT: ${{ secrets.WPT_SSH_CONNECT }}
+      # PHP binary on the Pantheon container — use 'php' so it follows whatever
+      # version the environment is configured to run, without hardcoding a version.
+      WPT_PHP_EXECUTABLE: php
+      # SSH key for Terminus SSH operations (remote:wp, remote:composer).
       WPT_SSH_PRIVATE_KEY_BASE64: ${{ secrets.WPT_SSH_PRIVATE_KEY_BASE64 }}
-      # Pantheon-specific variables
+      # Pantheon-specific variables.
       PANTHEON_SITE_NAME: ${{ secrets.PANTHEON_SITE_NAME }}
       PANTHEON_SITE_ENV: ${{ secrets.PANTHEON_SITE_ENV }}
       TERMINUS_MACHINE_TOKEN: ${{ secrets.TERMINUS_MACHINE_TOKEN }}
+      # Optional test scoping — set via workflow_dispatch inputs.
+      WPT_TEST_GROUP: ${{ inputs.test_group }}
+      WPT_TEST_FILTER: ${{ inputs.test_filter }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@20529878ed81ef8e78ddf08b480401e6101a850f # v2.35.3
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.4'
           coverage: none
 
       - name: Install NodeJS
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20
-      
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          terminus-machine-token: ${{ secrets.TERMINUS_MACHINE_TOKEN }}
 
-      - name: Authenticate Terminus
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@409451ede17f75acac08f42edc823fee6c435057 # v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_MACHINE_TOKEN }}
+
+      - name: Install Terminus plugins
+        run: |
+          terminus self:plugin:install pantheon-systems/terminus-composer-plugin
+
+      - name: Wake and configure Pantheon environment
         run: |
           terminus art wordpress
-          terminus auth:login --machine-token=${{ secrets.TERMINUS_MACHINE_TOKEN }}
-
-      - name: Debug
-        run: |
+          terminus env:wake ${{ secrets.PANTHEON_SITE_NAME }}.${{ secrets.PANTHEON_SITE_ENV }}
           terminus site:info ${{ secrets.PANTHEON_SITE_NAME }}
+          terminus env:info ${{ secrets.PANTHEON_SITE_NAME }}.${{ secrets.PANTHEON_SITE_ENV }}
+          terminus connection:set ${{ secrets.PANTHEON_SITE_NAME }}.${{ secrets.PANTHEON_SITE_ENV }} sftp
 
       - name: Prepare environment
         run: php prepare.php

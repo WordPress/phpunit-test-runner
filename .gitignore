@@ -4,3 +4,12 @@ vendor/
 package-lock.json
 commit.json
 ignore.json
+
+# Exclude the default test directory.
+wp-test-runner/
+
+# Files related to applying patches
+*.rej
+*.orig
+*.patch
+*.diff

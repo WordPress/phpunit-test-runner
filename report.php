@@ -1,179 +1,134 @@
 <?php
 /**
- * This script is responsible for reporting the results of the PHPUnit test runs to WordPress.org.
- * It gathers necessary information such as the SVN revision, test run messages, and the junit.xml
- * file containing the results. It then uploads these details using the WordPress.org API if an API
- * key is provided, or logs the results for later use.
+ * Reports PHPUnit test results to WordPress.org.
  *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
 
-/**
- * Check for the presence of required environment variables.
- * This function should be defined in functions.php and should throw an
- * exception or exit if any required variables are missing.
- */
 check_required_env( false );
 
-/**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
- */
-$WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_PREPARE_DIR    = trim( getenv( 'WPT_PREPARE_DIR' ) );
-$WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) );
-$WPT_REPORT_API_KEY = trim( getenv( 'WPT_REPORT_API_KEY' ) );
+$runner_vars        = setup_runner_env_vars();
+$PANTHEON_SITE_NAME = $runner_vars['PANTHEON_SITE_NAME'];
+$PANTHEON_SITE_ENV  = $runner_vars['PANTHEON_SITE_ENV'];
+$site_env           = escapeshellarg( $PANTHEON_SITE_NAME . '.' . $PANTHEON_SITE_ENV );
+$test_dir           = $runner_vars['WPT_TEST_DIR'];
+$logs_dir           = $test_dir . '/tests/phpunit/build/logs/';
+$logs_local         = $runner_vars['WPT_PREPARE_DIR'] . '/tests/phpunit/build/logs/';
+
+log_message( 'API key present: ' . ( ! empty( $runner_vars['WPT_REPORT_API_KEY'] ) ? 'yes' : 'NO — results will not be uploaded' ) );
 
 /**
- * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
- * The debug mode can affect error reporting and other debug-related settings.
+ * Get git commit info from Pantheon in a single terminus call.
+ * wordpress-develop uses git (not SVN), so we use the commit hash and subject.
  */
-$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
-switch( $WPT_DEBUG_INI ) {
-	case 0:
-	case 'false':
-		$WPT_DEBUG = false;
-		break;
-	case 1:
-	case 'true':
-	case 'verbose':
-		$WPT_DEBUG = 'verbose';
-		break;
-	default:
-		$WPT_DEBUG = false;
-		break;
+log_message( 'Getting commit info from Pantheon' );
+$git_php  = 'echo json_encode(["hash"=>trim(shell_exec("git -C " . escapeshellarg(' . var_export( $test_dir, true ) . ') . " log -1 --pretty=%H 2>/dev/null")), "msg"=>trim(shell_exec("git -C " . escapeshellarg(' . var_export( $test_dir, true ) . ') . " log -1 --pretty=%s 2>/dev/null"))]);';
+$git_json = trim( shell_exec( 'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $git_php ) . ' --skip-wordpress --quiet 2>/dev/null' ) );
+$git_info = json_decode( $git_json, true );
+$hash     = $git_info['hash'] ?? '';
+$message  = $git_info['msg']  ?? '';
+
+// The WordPress.org hosting test API expects an SVN revision number for 'commit' (e.g. 62519).
+// Fetch the current trunk revision from the SVN WebDAV endpoint using curl (no svn client needed).
+$svn_xml = shell_exec( 'curl -s --max-time 10 -X PROPFIND "https://develop.svn.wordpress.org/trunk" -H "Depth: 0" 2>/dev/null' );
+preg_match( '/<[^>]+version-name[^>]*>(\d+)</', $svn_xml, $svn_matches );
+$rev = $svn_matches[1] ?? '';
+if ( ! empty( $hash ) ) {
+	$message = substr( $hash, 0, 10 ) . ' ' . $message;
 }
-unset( $WPT_DEBUG_INI );
+log_message( 'SVN revision: ' . ( $rev ?: '(empty)' ) );
+log_message( 'Git commit:   ' . ( $hash ?: '(empty)' ) );
+log_message( 'Message:      ' . ( $message ?: '(empty)' ) );
 
 /**
- * Retrieves the SVN revision number from the git repository log.
- * Logs a message indicating the start of the SVN revision retrieval process.
- * Executes a shell command that accesses the git directory specified by the
- * WPT_PREPARE_DIR environment variable, retrieves the latest commit message,
- * and extracts the SVN revision number using a combination of grep and cut commands.
+ * Retrieve result files from Pantheon by base64-encoding them through terminus eval.
  */
-log_message('Getting SVN Revision');
-$rev = exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
+log_message( 'Fetching test results from Pantheon' );
 
-/**
- * Retrieves the latest SVN commit message from the git repository log.
- * Logs a message to indicate the retrieval of the SVN commit message. Executes a shell command
- * that accesses the git directory specified by the WPT_PREPARE_DIR environment variable,
- * fetches the latest commit message, and trims any whitespace from the message.
- */
-log_message('Getting SVN message');
-$message = trim( exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | head -1') );
+if ( ! is_dir( $logs_local ) ) {
+	mkdir( $logs_local, 0777, true );
+}
 
-/**
- * Prepares the file path for copying the junit.xml results.
- * Logs a message indicating the start of the operation to copy junit.xml results.
- * Constructs the file path to the junit.xml file(s) located in the test directory,
- * making use of the WPT_TEST_DIR environment variable. The path is sanitized to be
- * safely used in shell commands.
- */
-log_message('Copying junit.xml results');
-$junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
+// List what's actually in the logs directory on Pantheon so we can see what was written.
+log_message( 'Listing logs directory on Pantheon: ' . $logs_dir );
+$ls_php  = 'if(is_dir(' . var_export( $logs_dir, true ) . ')){$f=scandir(' . var_export( $logs_dir, true ) . ');foreach($f as $n){if($n!="."&&$n!=".."){echo $n." ".filesize(' . var_export( $logs_dir, true ) . '.$n)."\n";}}}else{echo "directory not found";}';
+$ls_out  = trim( shell_exec( 'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $ls_php ) . ' --skip-wordpress --quiet 2>/dev/null' ) );
+log_message( $ls_out ?: '(empty)' );
 
-/**
- * Modifies the junit.xml results file path for a remote location if an SSH connection is available.
- * If the WPT_SSH_CONNECT environment variable is not empty, indicating that an SSH connection
- * is configured, this snippet adapts the junit_location variable to include the necessary SSH
- * command and options for accessing the remote file system. It concatenates SSH options with the
- * remote path to ensure that the junit.xml results can be accessed or copied over SSH.
- */
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
+foreach ( array( 'junit.xml', 'env.json', 'testdox.txt' ) as $result_file ) {
+	log_message( 'Fetching ' . $result_file . ' ...' );
+	// Gzip before base64 so large files (junit.xml can be 5MB+) don't overwhelm the terminus connection.
+	$read_php = 'if(file_exists(' . var_export( $logs_dir . $result_file, true ) . ')){echo base64_encode(gzencode(file_get_contents(' . var_export( $logs_dir . $result_file, true ) . ')));}else{echo "";}';
+	$encoded  = trim( shell_exec( 'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $read_php ) . ' --skip-wordpress --quiet 2>/dev/null' ) );
+	if ( ! empty( $encoded ) ) {
+		$decoded = gzdecode( base64_decode( $encoded ) );
+		file_put_contents( $logs_local . $result_file, $decoded );
+		log_message( 'Retrieved ' . $result_file . ' (' . strlen( $decoded ) . ' bytes)' );
+	} else {
+		log_message( 'Warning: ' . $result_file . ' not found on Pantheon.' );
+	}
 }
 
 /**
- * Sets the options for the rsync command based on the debug mode.
- * Initializes the rsync options with the recursive flag. If the debug mode is set to 'verbose',
- * appends the 'v' flag to the rsync options to enable verbose output during the rsync operation,
- * providing more detailed information about the file transfer process.
+ * Process and upload results.
  */
-$rsync_options = '-r';
+log_message( 'Processing junit.xml' );
 
-if ( 'verbose' === $WPT_DEBUG ) {
-	$rsync_options = $rsync_options . 'v';
+if ( ! file_exists( $logs_local . 'junit.xml' ) ) {
+	error_message( 'junit.xml not found — test run did not complete (probable PHP crash). This is a hard failure.' );
 }
 
-/**
- * Constructs the rsync command for executing the synchronization of junit.xml files.
- * Concatenates the rsync command with the previously defined options and the source and
- * destination paths. The destination path is sanitized for shell execution. This command is
- * then passed to the `perform_operations` function, which executes the command to synchronize
- * the junit.xml files from the source to the destination directory.
- */
-$junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
-perform_operations( array(
-	$junit_exec,
-) );
-
-/**
- * Processes and uploads the junit.xml file.
- * First, a log message is recorded to indicate the start of processing the junit.xml file.
- * Then, the contents of the junit.xml file are read from the prepared directory into a string.
- * This XML string is then passed to a function that processes the XML data, presumably to prepare
- * it for upload or to extract relevant test run information.
- */
-log_message( 'Processing and uploading junit.xml' );
-$xml = file_get_contents( $WPT_PREPARE_DIR . '/junit.xml' );
+$xml     = file_get_contents( $logs_local . 'junit.xml' );
 $results = process_junit_xml( $xml );
 
-/**
- * Retrieves environment details from a JSON file or generates them if not available.
- * Initializes the environment details string. If an 'env.json' file exists in the prepared
- * directory, its contents are read into the environment details string. If the file doesn't
- * exist but the prepared directory is the same as the test directory, the environment details
- * are generated by calling a function that retrieves these details, then encoded into JSON format.
- */
 $env = '';
-if ( file_exists( $WPT_PREPARE_DIR . '/env.json' ) ) {
-	$env = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
-} elseif ( $WPT_PREPARE_DIR === $WPT_TEST_DIR ) {
-	$env = json_encode( get_env_details(), JSON_PRETTY_PRINT );
+if ( file_exists( $logs_local . 'env.json' ) ) {
+	$env = file_get_contents( $logs_local . 'env.json' );
+	log_message( 'env.json loaded' );
 }
 
 /**
- * Attempts to upload test results if an API key is available, otherwise logs the results locally.
- * Checks if an API key for reporting is present. If so, it attempts to upload the test results
- * using the `upload_results` function and processes the HTTP response. A success message is logged
- * if the upload is successful, indicated by a 20x HTTP status code. If the upload fails, an error
- * message is logged along with the HTTP status. If no API key is provided, it logs the test results
- * and environment details locally.
+ * Write a GHA step summary with key run info.
  */
-if( ! empty( $WPT_REPORT_API_KEY ) ) {
+$summary_file = getenv( 'GITHUB_STEP_SUMMARY' );
+if ( $summary_file ) {
+	$env_data = $env ? json_decode( $env, true ) : array();
+	$summary  = "## WordPress PHPUnit Test Results\n\n";
+	$summary .= '| | |' . "\n" . '|---|---|' . "\n";
+	$summary .= '| **Site** | ' . $PANTHEON_SITE_NAME . '.' . $PANTHEON_SITE_ENV . " |\n";
+	$summary .= '| **Revision** | ' . ( $rev ?: 'unknown' ) . " |\n";
+	$summary .= '| **Commit** | ' . ( $message ?: 'unknown' ) . " |\n";
+	$summary .= '| **PHP** | ' . ( $env_data['php_version'] ?? 'unknown' ) . " |\n";
+	$summary .= '| **MySQL** | ' . ( $env_data['mysql_version'] ?? 'unknown' ) . " |\n";
+	file_put_contents( $summary_file, $summary, FILE_APPEND );
+}
 
-	// Upload the results and capture the HTTP status and response body
-	list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $env, $WPT_REPORT_API_KEY );
+log_message( 'Uploading results' );
 
-	// Decode the JSON response body
+if ( ! empty( $runner_vars['WPT_REPORT_API_KEY'] ) ) {
+
+	list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $env, $runner_vars['WPT_REPORT_API_KEY'] );
 	$response = json_decode( $response_body, true );
+
 	if ( 20 == substr( $http_status, 0, 2 ) ) {
-
-		// Construct and log a success message with a link if provided in the response
-		$message = 'Results successfully uploaded';
-		$message .= isset( $response['link'] ) ? ': ' . $response['link'] : '';
-		log_message( $message );
-
+		$upload_msg  = 'Results successfully uploaded';
+		$upload_msg .= isset( $response['link'] ) ? ': ' . $response['link'] : '';
+		log_message( $upload_msg );
+		if ( $summary_file ) {
+			$link_line = isset( $response['link'] ) ? '| **Results** | [View on WordPress.org](' . $response['link'] . ") |\n" : '';
+			file_put_contents( $summary_file, $link_line, FILE_APPEND );
+		}
 	} else {
-
-		// Construct and log an error message with additional details if provided in the response
-		$message = 'Error uploading results';
-		$message .= isset( $response['message'] ) ? ': ' . $response['message'] : '';
-		$message .= ' (HTTP status ' . (int) $http_status . ')';
-		error_message( $message );
-
+		$err  = 'Error uploading results';
+		$err .= isset( $response['message'] ) ? ': ' . $response['message'] : '';
+		$err .= ' (HTTP ' . (int) $http_status . ')';
+		error_message( $err );
 	}
 
 } else {
-
-	// Log the test results and environment details locally if no API key is provided
-	log_message( '[+] TEST RESULTS' . "\n\n" . $results. "\n\n" );
+	log_message( 'No API key — logging results locally only' );
+	log_message( '[+] TEST RESULTS' . "\n\n" . $results . "\n\n" );
 	log_message( '[+] ENVIRONMENT' . "\n\n" . $env . "\n\n" );
-
 }

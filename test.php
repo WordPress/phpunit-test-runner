@@ -1,48 +1,29 @@
 <?php
 /**
- * Executes the PHPUnit test suite within the WordPress testing environment.
- * This script is designed to run tests either locally or on a remote server based on the environment setup.
- * It dynamically constructs the command to run PHPUnit and then executes it.
- * 
+ * Runs the WordPress PHPUnit test suite on the Pantheon environment via Terminus.
+ *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
 
-// Disable PHP output buffering
-ini_set( 'output_buffering', 'off' );
-ini_set( 'zlib.output_compression', 'off' );
-ini_set( 'implicit_flush', 'on' );
-for ( $i = 0; $i < ob_get_level(); $i++ ) {
-    ob_end_flush();
-}
-ob_implicit_flush( 1 );
-
-/**
- * Check for the presence of required environment variables.
- * This function should be defined in functions.php and should throw an
- * exception or exit if any required variables are missing.
- */
 check_required_env();
 
-/**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
- */
-$WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
-$WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
+$runner_vars = setup_runner_env_vars();
 
-// Uses the flavor (usually to test WordPress Multisite)
+$PANTHEON_SITE_NAME = $runner_vars['PANTHEON_SITE_NAME'];
+$PANTHEON_SITE_ENV  = $runner_vars['PANTHEON_SITE_ENV'];
+$site_env           = escapeshellarg( $PANTHEON_SITE_NAME . '.' . $PANTHEON_SITE_ENV );
+
+// Determine the PHP binary from the PHP version Terminus reported.
+// We derive it from WPT_PHP_EXECUTABLE if set, otherwise fall back to php8.1.
+$php_bin = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ?: 'php8.1';
+
+// Uses the flavor (usually to test WordPress Multisite).
 $WPT_FLAVOR_INI = trim( getenv( 'WPT_FLAVOR' ) );
-switch( $WPT_FLAVOR_INI ) {
-	case 0:
-		$WPT_FLAVOR_TXT = ''; // Simple WordPress
-		break;
+switch ( $WPT_FLAVOR_INI ) {
 	case 1:
-		$WPT_FLAVOR_TXT = ' -c tests/phpunit/multisite.xml'; // WordPress Multisite
+		$WPT_FLAVOR_TXT = ' -c tests/phpunit/multisite.xml';
 		break;
 	default:
 		$WPT_FLAVOR_TXT = '';
@@ -50,20 +31,17 @@ switch( $WPT_FLAVOR_INI ) {
 }
 unset( $WPT_FLAVOR_INI );
 
-// Uses the flavor (usually to test WordPress Multisite)
+// Uses the extra tests group (e.g., ajax, ms-files, external-http).
 $WPT_EXTRATESTS_INI = trim( getenv( 'WPT_EXTRATESTS' ) );
-switch( $WPT_EXTRATESTS_INI ) {
-	case 0:
-		$WPT_EXTRATESTS_TXT = ''; // no extra tests
-		break;
+switch ( $WPT_EXTRATESTS_INI ) {
 	case 1:
-		$WPT_EXTRATESTS_TXT = ' --group ajax'; // ajax tests
+		$WPT_EXTRATESTS_TXT = ' --group ajax';
 		break;
 	case 2:
-		$WPT_EXTRATESTS_TXT = ' --group ms-files'; // ms-files tests
+		$WPT_EXTRATESTS_TXT = ' --group ms-files';
 		break;
 	case 3:
-		$WPT_EXTRATESTS_TXT = ' --group external-http'; // external-http tests
+		$WPT_EXTRATESTS_TXT = ' --group external-http';
 		break;
 	default:
 		$WPT_EXTRATESTS_TXT = '';
@@ -71,25 +49,56 @@ switch( $WPT_EXTRATESTS_INI ) {
 }
 unset( $WPT_EXTRATESTS_INI );
 
-/**
- * Determines the PHPUnit command to execute the test suite.
- * Retrieves the PHPUnit command from the environment variable 'WPT_PHPUNIT_CMD'. If the environment
- * variable is not set or is empty, it constructs a default command using the PHP executable path and
- * the test directory path from environment variables, appending parameters to the PHPUnit call to
- * avoid reporting useless tests.
- */
+$logs_dir  = $runner_vars['WPT_TEST_DIR'] . '/tests/phpunit/build/logs';
+$junit_log = $logs_dir . '/junit.xml';
+// PHPUnit runs as a subprocess (via passthru) whose writes don't persist to /code/ across
+// terminus connections. Write to /tmp/ instead, then copy to /code/ from the parent process.
+$junit_tmp   = '/tmp/wpt-junit.xml';
+$testdox_tmp = '/tmp/wpt-testdox.txt';
+
+// Build the PHPUnit shell command that will run on the Pantheon container.
+// Optional scoping via workflow_dispatch inputs.
+$WPT_TEST_FILTER = trim( getenv( 'WPT_TEST_FILTER' ) );
+$WPT_TEST_GROUP  = trim( getenv( 'WPT_TEST_GROUP' ) );
+$scope_txt = '';
+if ( ! empty( $WPT_TEST_FILTER ) ) {
+	$scope_txt = ' --filter ' . escapeshellarg( $WPT_TEST_FILTER );
+} elseif ( ! empty( $WPT_TEST_GROUP ) ) {
+	$scope_txt = ' --group ' . escapeshellarg( $WPT_TEST_GROUP );
+}
+
 $WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
-if( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $WPT_TEST_DIR ) . ' && ' . $WPT_PHP_EXECUTABLE . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests --verbose' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT;
+if ( empty( $WPT_PHPUNIT_CMD ) ) {
+	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] )
+		. ' && ' . $php_bin . ' ./vendor/phpunit/phpunit/phpunit'
+		. ' --dont-report-useless-tests'
+		. ' --default-time-limit=60'
+		. ' --log-junit ' . escapeshellarg( $junit_tmp )
+		. ' --testdox-text ' . escapeshellarg( $testdox_tmp )
+		. $WPT_FLAVOR_TXT
+		. $WPT_EXTRATESTS_TXT
+		. $scope_txt;
 }
 
-// Adjust SSH command to force TTY and reduce buffering
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
-    $WPT_SSH_OPTIONS .= ' -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o LogLevel=ERROR';
-    $WPT_PHPUNIT_CMD = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $WPT_PHPUNIT_CMD );
+// After passthru() returns, copy files from /tmp/ (where the subprocess wrote them)
+// to /code/ (parent-process write, persists across terminus connections).
+$copy_php = '
+if(file_exists(' . var_export( $junit_tmp, true ) . ')){
+    @mkdir(' . var_export( $logs_dir, true ) . ', 0777, true);
+    copy(' . var_export( $junit_tmp, true ) . ', ' . var_export( $junit_log, true ) . ');
+    echo "Copied junit.xml (" . filesize(' . var_export( $junit_log, true ) . ') . " bytes)\n";
 }
+if(file_exists(' . var_export( $testdox_tmp, true ) . ')){
+    copy(' . var_export( $testdox_tmp, true ) . ', ' . var_export( $logs_dir . '/testdox.txt', true ) . ');
+    echo "Copied testdox.txt\n";
+}
+';
 
-// Execute the PHPUnit command.
+// Wrap in passthru() and execute on Pantheon via terminus remote:wp eval --skip-wordpress.
+// passthru() streams PHPUnit's output in real time so progress is visible in GHA logs.
+// Capture and propagate the exit code so terminus (and GHA) can see test failures/crashes.
+$eval_code = '$c=0; passthru(' . var_export( $WPT_PHPUNIT_CMD, true ) . ', $c); ' . $copy_php . ' exit($c);';
+
 perform_operations( array(
-	$WPT_PHPUNIT_CMD
+	'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $eval_code ) . ' --skip-wordpress',
 ) );

@@ -18,29 +18,93 @@
  */
 function check_required_env( $check_db = true ) {
 
+	$pantheon_mode = ! empty( getenv( 'PANTHEON_SITE_NAME' ) ) && ! empty( getenv( 'PANTHEON_SITE_ENV' ) );
+
 	$required = array(
 		'WPT_PREPARE_DIR',
 		'WPT_TEST_DIR',
-		'WPT_DB_NAME',
-		'WPT_DB_USER',
-		'WPT_DB_PASSWORD',
-		'WPT_DB_HOST',
 	);
-	foreach( $required as $var ) {
-		if ( ! $check_db && 0 === strpos( $var, 'WPT_DB_' ) ) {
-			continue;
-		}
+
+	if ( $pantheon_mode ) {
+		// In Pantheon mode the DB lives on the Pantheon container — no GHA-side DB vars needed.
+		$required[] = 'PANTHEON_SITE_NAME';
+		$required[] = 'PANTHEON_SITE_ENV';
+	} elseif ( $check_db ) {
+		$required[] = 'WPT_DB_NAME';
+		$required[] = 'WPT_DB_USER';
+		$required[] = 'WPT_DB_PASSWORD';
+		$required[] = 'WPT_DB_HOST';
+	}
+
+	foreach ( $required as $var ) {
 		if ( false === getenv( $var ) ) {
 			error_message( $var . ' must be set as an environment variable. Did you remember to execute \'source .env\' to load the environment variables?' );
 		}
 	}
 
+	// Without SSH or Pantheon mode, both dirs must be the same (local run).
 	if ( empty( getenv( 'WPT_SSH_CONNECT' ) )
+		&& ! $pantheon_mode
 		&& getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
 		error_message( 'WPT_TEST_DIR must be the same as WPT_PREPARE_DIR when running locally.' );
 	}
 
 	log_message( 'Environment variables pass checks.' );
+}
+
+/**
+ * Parses environment variables used to configure the test runner.
+ *
+ * @return array[] {
+ *      Test runner configuration options.
+ *
+ *      @type array ...$0 {
+ *          An associative array of test runner configuration options.
+ *
+ *          @type string $WPT_TEST_DIR               Path to the directory where wordpress-develop is placed for testing
+ *                                                   after being prepared. Default '/tmp/wp-test-runner'.
+ *          @type string $WPT_PREPARE_DIR            Path to the temporary directory where wordpress-develop is cloned
+ *                                                   and configured. Default '/tmp/wp-test-runner'.
+ *          @type string $WPT_SSH_CONNECT            List of inner blocks. An array of arrays that
+ *                                                   have the same structure as this one.
+ *          @type string $WPT_SSH_OPTIONS            HTML from inside block comment delimiters.
+ *          @type string $WPT_PHP_EXECUTABLE         List of string fragments and null markers where
+ *                                                   inner blocks were found.
+ *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
+ *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
+ *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled.
+ *      }
+ *  }
+ */
+function setup_runner_env_vars() {
+	// Set the test directory first as it's needed for processing other variables.
+	$runner_configuration = array(
+		'WPT_TEST_DIR' => trim( getenv( 'WPT_TEST_DIR' ) ) ?: '/tmp/wp-test-runner',
+	);
+
+
+
+	return array_merge(
+		$runner_configuration,
+		array(
+			// Directory configuration
+			'WPT_PREPARE_DIR'            => trim( getenv( 'WPT_PREPARE_DIR' ) ) ?: '/tmp/wp-test-runner',
+			// SSH connection configuration
+			'WPT_SSH_CONNECT'            => trim( getenv( 'WPT_SSH_CONNECT' ) ),
+			'WPT_SSH_OPTIONS'            => trim( getenv( 'WPT_SSH_OPTIONS' ) ) ?: '-o StrictHostKeyChecking=no',
+			// Test execution configuration
+			'WPT_PHP_EXECUTABLE'         => trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ?: 'php',
+			// Cleanup configuration
+			'WPT_RM_TEST_DIR_CMD'        => trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ?: 'rm -r ' . $runner_configuration['WPT_TEST_DIR'],
+			// Reporting configuration
+			'WPT_REPORT_API_KEY'         => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
+			// Miscellaneous
+			'WPT_DEBUG'                  => (bool) getenv( 'WPT_DEBUG' ),
+			// Pantheon-specific
+			'PANTHEON_SITE_NAME'         => trim( getenv( 'PANTHEON_SITE_NAME' ) ),
+			'PANTHEON_SITE_ENV'          => trim( getenv( 'PANTHEON_SITE_ENV' ) ),
+		)
+	);
 }
 
 /**

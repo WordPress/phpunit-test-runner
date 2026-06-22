@@ -1,142 +1,95 @@
 <?php
 /**
- * This script prepares the environment for WordPress unit tests.
- * It sets up the necessary variables and configurations based on the environment.
- * The script assumes that certain environment variables are set to configure SSH,
- * directories, and executables used in the test preparation process.
+ * Prepares the environment for WordPress unit tests.
+ *
+ * In Pantheon mode: clones wordpress-develop directly on the Pantheon container
+ * (avoiding rsync and SSH key requirements), generates wp-tests-config.php locally
+ * using Pantheon's internal DB credentials, then uploads the config and runs
+ * Composer on Pantheon via Terminus.
  *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
 require __DIR__ . '/functions.php';
 
-/**
- * Check for the presence of required environment variables.
- * This function should be defined in functions.php and should throw an
- * exception or exit if any required variables are missing.
- */
 check_required_env();
 
-/**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
- */
-$WPT_PREPARE_DIR    = trim( getenv( 'WPT_PREPARE_DIR' ) );
-$WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) ) ? : '-o StrictHostKeyChecking=no';
-$WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_PHP_EXECUTABLE = trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ? : 'php';
-$WPT_CERTIFICATE_VALIDATION = trim( getenv( 'WPT_CERTIFICATE_VALIDATION' ) );
-$TERMINUS_MACHINE_TOKEN = getenv( 'TERMINUS_MACHINE_TOKEN' );
-$PANTHEON_SITE_NAME = getenv( 'PANTHEON_SITE_NAME' );
-$PANTHEON_SITE_ENV = getenv( 'PANTHEON_SITE_ENV' );
+$runner_vars = setup_runner_env_vars();
+
+$PANTHEON_SITE_NAME = $runner_vars['PANTHEON_SITE_NAME'];
+$PANTHEON_SITE_ENV  = $runner_vars['PANTHEON_SITE_ENV'];
+$site_env           = escapeshellarg( $PANTHEON_SITE_NAME . '.' . $PANTHEON_SITE_ENV );
+$test_dir           = $runner_vars['WPT_TEST_DIR'];
 
 /**
- * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
- * The debug mode can affect error reporting and other debug-related settings.
+ * Set up the SSH private key so Terminus can authenticate for remote:wp and remote:composer.
  */
-$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
-switch( $WPT_DEBUG_INI ) {
-	case 0:
-	case 'false':
-		$WPT_DEBUG = false;
-		break;
-	case 1:
-	case 'true':
-	case 'verbose':
-		$WPT_DEBUG = 'verbose';
-		break;
-	default:
-		$WPT_DEBUG = false;
-		break;
-}
-unset( $WPT_DEBUG_INI );
-
-/**
- * Sets up the SSH private key for use in the test environment if provided.
- * The private key is expected to be in base64-encoded form in the environment variable 'WPT_SSH_PRIVATE_KEY_BASE64'.
- * It is decoded and saved to the user's .ssh directory as 'id_rsa'.
- * Proper permissions are set on the private key to secure it.
- * If an SSH connection string is provided, it performs a remote operation to ensure the WP CLI is accessible.
- * Otherwise, it performs a local operation to check the WP CLI.
- *
- * @throws Exception If there is an issue creating the .ssh directory or writing the key file.
- */
-// Set the SSH private key if it's provided in the environment.
 $WPT_SSH_PRIVATE_KEY_BASE64 = trim( getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' ) );
-
-// Check if the private key variable is not empty.
 if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
-
-	// Log the action of securely extracting the private key.
 	log_message( 'Securely extracting WPT_SSH_PRIVATE_KEY_BASE64 into ~/.ssh/id_rsa' );
-
-	// Check if the .ssh directory exists in the home directory, and create it if it does not.
 	if ( ! is_dir( getenv( 'HOME' ) . '/.ssh' ) ) {
-		// The mkdir function creates the directory with the specified permissions and the recursive flag set to true.
 		mkdir( getenv( 'HOME' ) . '/.ssh', 0777, true );
 	}
-
-	// Write the decoded private key into the id_rsa file within the .ssh directory.
 	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $WPT_SSH_PRIVATE_KEY_BASE64 ) );
 	perform_operations( array(
 		'chmod 600 ~/.ssh/id_rsa',
-        'echo "Host *.drush.in HostKeyAlgorithms +ssh-rsa" >> ~/.ssh/config',
-        'echo "Host *.drush.in PubkeyAcceptedKeyTypes +ssh-rsa" >> ~/.ssh/config',
-        'echo "StrictHostKeyChecking no" >> ~/.ssh/config',
-		'terminus wp ' . $PANTHEON_SITE_NAME . '.' . $PANTHEON_SITE_ENV . ' -- cli info',
-		'terminus connection:set ' . $PANTHEON_SITE_NAME . '.' . $PANTHEON_SITE_ENV . ' sftp',
+		'echo "Host *.drush.in" >> ~/.ssh/config',
+		'echo "  HostKeyAlgorithms +ssh-rsa" >> ~/.ssh/config',
+		'echo "  PubkeyAcceptedKeyTypes +ssh-rsa" >> ~/.ssh/config',
+		'echo "StrictHostKeyChecking no" >> ~/.ssh/config',
 	) );
 }
 
 /**
- * Don't validate the TLS certificate
- * Useful for local environments
+ * Fetch Pantheon's internal DB credentials and PHP version in one terminus call.
+ * Using internal credentials means tests connect to localhost — no latency.
  */
-$certificate_validation = '';
-if( ! $WPT_CERTIFICATE_VALIDATION ) {
-	$certificate_validation .= ' --no-check-certificate';
+log_message( 'Fetching Pantheon environment DB credentials and PHP version' );
+$info_php = 'echo json_encode(["host"=>getenv("DB_HOST"),"port"=>getenv("DB_PORT"),"name"=>getenv("DB_NAME"),"user"=>getenv("DB_USER"),"pass"=>getenv("DB_PASSWORD"),"php"=>PHP_VERSION]);';
+$info_json = trim( shell_exec( 'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $info_php ) . ' --skip-wordpress --quiet 2>/dev/null' ) );
+$pantheon  = json_decode( $info_json, true );
+
+if ( empty( $pantheon ) || empty( $pantheon['host'] ) ) {
+	error_message( 'Could not retrieve Pantheon environment info. Check Terminus authentication and site/env names.' );
+}
+
+$env_php_version  = $pantheon['php'];
+$pantheon_db_host = $pantheon['host'] . ':' . $pantheon['port'];
+$php_bin          = 'php' . implode( '.', array_slice( explode( '.', $env_php_version ), 0, 2 ) );
+
+log_message( 'Pantheon PHP: ' . $env_php_version . ' (binary: ' . $php_bin . ')' );
+log_message( 'Pantheon DB host: ' . $pantheon_db_host );
+
+if ( version_compare( $env_php_version, '7.2', '<' ) ) {
+	error_message( 'The test runner is not compatible with PHP < 7.2.' );
 }
 
 /**
- * Performs a series of operations to set up the test environment. This includes creating a preparation directory,
- * cloning the WordPress development repository, and preparing the environment with npm.
+ * Clone wordpress-develop directly on Pantheon's container.
+ * Pantheon has git and outbound HTTPS, so this avoids any rsync/SSH-key dependency.
+ * npm build is intentionally skipped — PHP unit tests do not require compiled JS/CSS.
  */
-// Prepare an array of shell commands to set up the testing environment.
+log_message( 'Cloning wordpress-develop on Pantheon' );
+$clone_cmd = 'rm -rf ' . escapeshellarg( $test_dir ) . ' && git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $test_dir ) . ' 2>&1';
 perform_operations( array(
-
-	// Create the preparation directory if it doesn't exist. The '-p' flag creates intermediate directories as required.
-	'mkdir -p ' . escapeshellarg( $WPT_PREPARE_DIR ),
-
-	// Clone the WordPress develop repository from GitHub into the preparation directory.
-	// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
-	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $WPT_PREPARE_DIR ),
-
-	// Change directory to the preparation directory, install npm dependencies, and build the project.
-	'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . '; npm install && npm run build'
-
+	'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( 'passthru(' . var_export( $clone_cmd, true ) . ');' ) . ' --skip-wordpress',
 ) );
 
-// Log a message indicating the start of the variable replacement process for configuration.
-log_message( 'Replacing variables in wp-tests-config.php' );
-
 /**
- * Reads the contents of the WordPress test configuration sample file.
- * This file contains template placeholders that need to be replaced with actual values 
- * from environment variables to configure the WordPress test environment.
+ * Generate wp-tests-config.php locally using Pantheon's internal DB credentials,
+ * then upload it to Pantheon by base64-encoding it through terminus eval.
+ * This avoids any file transfer over SSH/rsync.
  */
-$contents = file_get_contents( $WPT_PREPARE_DIR . '/wp-tests-config-sample.php' );
+log_message( 'Generating wp-tests-config.php' );
+$sample_php = 'echo base64_encode(file_get_contents(' . var_export( $test_dir . '/wp-tests-config-sample.php', true ) . '));';
+$sample_b64 = trim( shell_exec( 'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $sample_php ) . ' --skip-wordpress --quiet 2>/dev/null' ) );
 
-/**
- * Prepares a script to log system information relevant to the testing environment.
- * The script checks for the existence of the log directory and creates it if it does not exist.
- * It then collects various pieces of system information including PHP version, loaded PHP modules,
- * MySQL version, operating system details, and versions of key utilities like cURL and OpenSSL.
- * This information is collected in an array and written to a JSON file in the log directory.
- * Additionally, if running from the command line during a WordPress installation process, 
- * it outputs the PHP version and executable path.
- */
+if ( empty( $sample_b64 ) ) {
+	error_message( 'Could not read wp-tests-config-sample.php from Pantheon. Did the git clone succeed?' );
+}
+
+$contents = base64_decode( $sample_b64 );
+
 $system_logger = <<<EOT
 // Create the log directory to store test results
 if ( ! is_dir(  __DIR__ . '/tests/phpunit/build/logs/' ) ) {
@@ -216,9 +169,6 @@ if ( class_exists( 'Imagick' ) ) {
 	\$env['system_utils']['graphicsmagick'] = \$version[1];
 }
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
-//\$mysqli = new mysqli( WPT_DB_HOST, WPT_DB_USER, WPT_DB_PASSWORD, WPT_DB_NAME );
-//\$env['mysql_version'] = \$mysqli->query("SELECT VERSION()")->fetch_row()[0];
-//\$mysqli->close();
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( \$env, JSON_PRETTY_PRINT ) );
 if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
 	echo PHP_EOL;
@@ -227,135 +177,35 @@ if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) 
 }
 EOT;
 
-// Initialize a string that will be used to identify the database settings section in the configuration file.
 $logger_replace_string = '// ** Database settings ** //' . PHP_EOL;
+$system_logger         = $logger_replace_string . $system_logger;
 
-// Prepend the logger script to the database settings identifier to ensure it gets included in the wp-tests-config.php file.
-$system_logger = $logger_replace_string . $system_logger;
-
-// Define a string that will set the 'WP_PHP_BINARY' constant to the path of the PHP executable.
-$php_binary_string = 'define( \'WP_PHP_BINARY\', \''. $WPT_PHP_EXECUTABLE . '\' );';
-
-/**
- * An associative array mapping configuration file placeholders to environment-specific values.
- * This array is used in the subsequent str_replace operation to replace placeholders
- * in the wp-tests-config-sample.php file with values from the environment or defaults if none are provided.
- */
 $search_replace = array(
-	'wptests_'                              => trim( getenv( 'WPT_TABLE_PREFIX' ) ) ? : 'wptests_',
-	'youremptytestdbnamehere'               => trim( getenv( 'WPT_DB_NAME' ) ),
-	'yourusernamehere'                      => trim( getenv( 'WPT_DB_USER' ) ),
-	'yourpasswordhere'                      => trim( getenv( 'WPT_DB_PASSWORD' ) ),
-	'localhost'                             => trim( getenv( 'WPT_DB_HOST' ) ),
-	'define( \'WP_PHP_BINARY\', \'php\' );' => $php_binary_string,
+	'wptests_'                              => trim( getenv( 'WPT_TABLE_PREFIX' ) ) ?: 'wptests_',
+	'youremptytestdbnamehere'               => $pantheon['name'],
+	'yourusernamehere'                      => $pantheon['user'],
+	'yourpasswordhere'                      => $pantheon['pass'],
+	'localhost'                             => $pantheon_db_host,
+	'define( \'WP_PHP_BINARY\', \'php\' );' => 'define( \'WP_PHP_BINARY\', \'' . $php_bin . '\' );',
 	$logger_replace_string                  => $system_logger,
 );
 
-// Replace the placeholders in the wp-tests-config-sample.php file content with actual values.
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
 
-// Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
-file_put_contents( $WPT_PREPARE_DIR . '/wp-tests-config.php', $contents );
-
-/**
- * Determines the PHP version of the test environment to ensure the correct version of PHPUnit is installed.
- * It constructs a command that prints out the PHP version in a format compatible with PHPUnit's version requirements.
- */
-$php_version_cmd = $WPT_PHP_EXECUTABLE . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
-
-/**
- * If an SSH connection string is provided, the command to determine the PHP version is modified 
- * to execute remotely over SSH. This is required if the test environment is not the local machine.
- */
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	// The PHP version check command is prefixed with the SSH command, including SSH options,
-	// and the connection string, ensuring the command is executed on the remote machine.
-	$php_version_cmd = 'ssh ' . $WPT_SSH_OPTIONS . ' ' . escapeshellarg( $WPT_SSH_CONNECT ) . ' ' . escapeshellarg( $php_version_cmd );
-}
-
-// Initialize return value variable for the exec function call.
-$retval = 0;
-
-/**
- * Executes the constructed command to obtain the PHP version of the test environment.
- * The output is stored in $env_php_version, and the return value of the command execution is stored in $retval.
- */
-$env_php_version = exec( $php_version_cmd, $output, $retval );
-
-// Check if the command execution was successful by inspecting the return value.
-if ( $retval !== 0 ) {
-	// If the return value is not zero, an error occurred, and a message is logged.
-	error_message( 'Could not retrieve the environment PHP Version.' );
-}
-
-// Log the obtained PHP version for confirmation and debugging purposes.
-log_message( 'Environment PHP Version: ' . $env_php_version );
-
-/**
- * Checks if the detected PHP version is below 7.2.
- * The test runner requires PHP version 7.2 or above, and if the environment's PHP version
- * is lower, it logs an error message and could terminate the script.
- */
-if ( version_compare( $env_php_version, '7.2', '<' ) ) {
-	// Logs an error message indicating the test runner's incompatibility with PHP versions below 7.2.
-	error_message( 'The test runner is not compatible with PHP < 7.2.' );
-}
-
-/**
- * Use Composer to manage PHPUnit and its dependencies.
- * This allows for better dependency management and compatibility.
- */
-
-// Check if Composer is installed and available in the PATH.
-$composer_cmd = 'cd ' . escapeshellarg( $WPT_PREPARE_DIR ) . ' && ';
-$retval = 0;
-$composer_path = escapeshellarg( system( 'which composer', $retval ) );
-
-if ( $retval === 0 ) {
-
-	// If Composer is available, prepare the command to use the Composer binary.
-	$composer_cmd .= $composer_path . ' ';
-
-} else {
-
-	// If Composer is not available, download the Composer phar file.
-	log_message( 'Local Composer not found. Downloading latest stable ...' );
-
-	perform_operations( array(
-		'wget -O ' . escapeshellarg( $WPT_PREPARE_DIR . '/composer.phar' ) . ' https://getcomposer.org/composer-stable.phar',
-	) );
-
-	// Update the command to use the downloaded Composer phar file.
-	$composer_cmd .= 'php composer.phar ';
-}
-
-// Set the PHP version for Composer to ensure compatibility and update dependencies.
+// Upload the generated config to Pantheon via base64 through terminus eval.
+$config_b64  = base64_encode( $contents );
+$write_php   = 'file_put_contents(' . var_export( $test_dir . '/wp-tests-config.php', true ) . ', base64_decode(' . var_export( $config_b64, true ) . ')); echo "Config written.\n";';
 perform_operations( array(
-	$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
-	$composer_cmd . 'update',
+	'terminus remote:wp ' . $site_env . ' -- eval ' . escapeshellarg( $write_php ) . ' --skip-wordpress',
 ) );
 
 /**
- * If an SSH connection is configured, use rsync to transfer the prepared files to the remote test environment.
- * The -r option for rsync enables recursive copying to handle directory structures.
- * Additional rsync options may be included for more verbose output if debugging is enabled.
+ * Run Composer on Pantheon to install PHPUnit and its dependencies.
  */
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	// Initialize rsync options with recursive copying.
-	$rsync_options = '-r';
+log_message( 'Running Composer on Pantheon' );
+perform_operations( array(
+	'terminus remote:composer ' . $site_env . ' -- config platform.php ' . escapeshellarg( $env_php_version ) . ' --working-dir=' . escapeshellarg( $test_dir ),
+	'terminus remote:composer ' . $site_env . ' -- update --working-dir=' . escapeshellarg( $test_dir ),
+) );
 
-	// If debug mode is set to verbose, append 'v' to rsync options for verbose output.
-	if ( 'verbose' === $WPT_DEBUG ) {
-		$rsync_options = $rsync_options . 'v';
-	}
-
-	// Perform the rsync operation with the configured options and exclude patterns.
-	// This operation synchronizes the test environment with the prepared files, excluding version control directories
-	// and other non-essential files for test execution.
-	perform_operations( array(
-		'rsync ' . $rsync_options . ' --exclude=".git/" --exclude="node_modules/" --exclude="composer.phar" -e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( trailingslashit( $WPT_PREPARE_DIR )  ) . ' ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $WPT_TEST_DIR ),
-	) );
-}
-
-// Log a success message indicating that the environment has been prepared.
 log_message( 'Success: Prepared environment.' );
