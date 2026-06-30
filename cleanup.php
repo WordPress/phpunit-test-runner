@@ -2,7 +2,7 @@
 /**
  * This script is responsible for cleaning up the test environment after a run of the WordPress PHPUnit Test Runner.
  * It ensures that temporary directories and files created during the test process are properly deleted.
- * 
+ *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
@@ -27,11 +27,13 @@ $runner_vars = setup_runner_env_vars();
  * Forcefully deletes only the .git directory and the node_modules cache.
  * Afterward, the entire preparation directory is removed to ensure a clean state for the next test run.
  */
-perform_operations( array(
-	'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
-	'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
-	'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
-) );
+perform_operations(
+	array(
+		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
+		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
+		'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+	)
+);
 
 /**
  * Cleans up the test directory on a remote server.
@@ -41,7 +43,9 @@ perform_operations( array(
  * of shell commands as its input.
  */
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	perform_operations( array(
-		'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
-	) );
+	perform_operations(
+		array(
+			'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
+		)
+	);
 }
