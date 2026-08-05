@@ -1,0 +1,97 @@
+name: Coding Standards
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.php'
+      - 'composer.*'
+      - 'phpcs.xml.dist'
+      - '.github/workflows/coding-standards.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  lint:
+    name: PHP Syntax Check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Check PHP syntax
+        run: find . -name "*.php" -not -path "./.git/*" -not -path "./vendor/*" | xargs -n1 php -l
+
+  phpcs:
+    name: Coding Standards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: cs2pr
+
+      - name: "Get last Monday's date"
+        id: get-date
+        run: echo "date=$(/bin/date -u --date='last Mon' "+%F")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache PHPCS scan cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .cache/phpcs.json
+          key: ${{ runner.os }}-date-${{ steps.get-date.outputs.date }}-phpcs-cache-${{ hashFiles('**/composer.json', 'phpcs.xml.dist') }}
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          custom-cache-suffix: ${{ steps.get-date.outputs.date }}
+
+      - name: Make Composer packages available globally
+        run: echo "${PWD}/vendor/bin" >> "$GITHUB_PATH"
+
+      - name: Run PHPCS
+        id: phpcs
+        run: |
+          mkdir -p .cache
+          phpcs -n --report-full --cache=./.cache/phpcs.json --report-checkstyle=./.cache/phpcs-report.xml
+
+      - name: Show PHPCS results in PR
+        if: ${{ always() && steps.phpcs.outcome == 'failure' }}
+        run: cs2pr ./.cache/phpcs-report.xml
+
+      - name: Ensure version-controlled files are not modified or deleted
+        run: git diff --exit-code
