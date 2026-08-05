@@ -26,7 +26,7 @@ function check_required_env( $check_db = true ) {
 		'WPT_DB_PASSWORD',
 		'WPT_DB_HOST',
 	);
-	foreach( $required as $var ) {
+	foreach ( $required as $var ) {
 		if ( ! $check_db && 0 === strpos( $var, 'WPT_DB_' ) ) {
 			continue;
 		}
@@ -68,29 +68,26 @@ function check_required_env( $check_db = true ) {
  *  }
  */
 function setup_runner_env_vars() {
-	// Set the test directory first as it's needed for processing other variables.
+	$test_dir    = trim( getenv( 'WPT_TEST_DIR' ) );
+	$prepare_dir = trim( getenv( 'WPT_PREPARE_DIR' ) );
+	$ssh_options = trim( getenv( 'WPT_SSH_OPTIONS' ) );
+	$php_exec    = trim( getenv( 'WPT_PHP_EXECUTABLE' ) );
+	$rm_test_dir = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) );
+
 	$runner_configuration = array(
-		'WPT_TEST_DIR' => trim( getenv( 'WPT_TEST_DIR' ) ) ?: '/tmp/wp-test-runner',
+		'WPT_TEST_DIR' => '' !== $test_dir ? $test_dir : '/tmp/wp-test-runner',
 	);
-
-
 
 	return array_merge(
 		$runner_configuration,
 		array(
-			// Directory configuration
-			'WPT_PREPARE_DIR'            => trim( getenv( 'WPT_PREPARE_DIR' ) ) ?: '/tmp/wp-test-runner',
-			// SSH connection configuration
-			'WPT_SSH_CONNECT'            => trim( getenv( 'WPT_SSH_CONNECT' ) ),
-			'WPT_SSH_OPTIONS'            => trim( getenv( 'WPT_SSH_OPTIONS' ) ) ?: '-o StrictHostKeyChecking=no',
-			// Test execution configuration
-			'WPT_PHP_EXECUTABLE'         => trim( getenv( 'WPT_PHP_EXECUTABLE' ) ) ?: 'php',
-			// Cleanup configuration
-			'WPT_RM_TEST_DIR_CMD'        => trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) ) ?: 'rm -r ' . $runner_configuration['WPT_TEST_DIR'],
-			// Reporting configuration
-			'WPT_REPORT_API_KEY'         => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
-			// Miscellaneous
-			'WPT_DEBUG'                  => (bool) getenv( 'WPT_DEBUG' ),
+			'WPT_PREPARE_DIR'     => '' !== $prepare_dir ? $prepare_dir : '/tmp/wp-test-runner',
+			'WPT_SSH_CONNECT'     => trim( getenv( 'WPT_SSH_CONNECT' ) ),
+			'WPT_SSH_OPTIONS'     => '' !== $ssh_options ? $ssh_options : '-o StrictHostKeyChecking=no',
+			'WPT_PHP_EXECUTABLE'  => '' !== $php_exec ? $php_exec : 'php',
+			'WPT_RM_TEST_DIR_CMD' => '' !== $rm_test_dir ? $rm_test_dir : 'rm -r ' . $runner_configuration['WPT_TEST_DIR'],
+			'WPT_REPORT_API_KEY'  => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
+			'WPT_DEBUG'           => (bool) getenv( 'WPT_DEBUG' ),
 		)
 	);
 }
@@ -114,7 +111,7 @@ function setup_runner_env_vars() {
  * @uses error_message() to display an error message if a shell command fails. The execution stops at the first failure.
  */
 function perform_operations( $operations ) {
-	foreach( $operations as $operation ) {
+	foreach ( $operations as $operation ) {
 		log_message( $operation );
 		passthru( $operation, $return_code );
 		if ( 0 !== $return_code ) {
@@ -178,8 +175,8 @@ function error_message( $message ) {
  * @uses rtrim() to remove any existing trailing slashes from the input string before appending a new trailing slash.
  *      This ensures that the result consistently has exactly one trailing slash, regardless of the input string's initial state.
  */
-function trailingslashit( $string ) {
-	return rtrim( $string, '/' ) . '/';
+function trailingslashit( $str ) {
+	return rtrim( $str, '/' ) . '/';
 }
 
 /**
@@ -202,16 +199,15 @@ function trailingslashit( $string ) {
  * @uses xpath() to query specific elements within the XML structure, particularly to find test suites with failures or errors.
  * @uses json_encode() to convert the array structure containing the test results into a JSON formatted string.
  */
-function process_junit_xml( $xml_string )
-{
+function process_junit_xml( $xml_string ) {
 	if ( empty( $xml_string ) ) {
 		return '';
 	}
 
-	$xml = simplexml_load_string( $xml_string );
+	$xml        = simplexml_load_string( $xml_string );
 	$xml_string = null;
-	$project = $xml->testsuite;
-	$results = array();
+	$project    = $xml->testsuite;
+	$results    = array();
 
 	$results = array(
 		'tests'    => (string) $project['tests'],
@@ -228,7 +224,7 @@ function process_junit_xml( $xml_string )
 			'name'     => (string) $testsuite['name'],
 			'tests'    => (string) $testsuite['tests'],
 			'failures' => (string) $testsuite['failures'],
-			'errors'   => (string) $testsuite['errors']
+			'errors'   => (string) $testsuite['errors'],
 		);
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue;
@@ -236,7 +232,7 @@ function process_junit_xml( $xml_string )
 		$failures = array();
 		foreach ( $testsuite->testcase as $testcase ) {
 			// Capture both failure and error children.
-			foreach ( array( 'failure', 'error') as $key ) {
+			foreach ( array( 'failure', 'error' ) as $key ) {
 				if ( isset( $testcase->{$key} ) ) {
 					$failures[ (string) $testcase['name'] ] = array(
 						'name' => (string) $testcase['name'],
@@ -246,7 +242,7 @@ function process_junit_xml( $xml_string )
 			}
 		}
 		if ( $failures ) {
-			$results['testsuites'][ (string) $testsuite['name'] ] = $result;
+			$results['testsuites'][ (string) $testsuite['name'] ]              = $result;
 			$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = $failures;
 		}
 	}
@@ -277,19 +273,19 @@ function process_junit_xml( $xml_string )
  * @uses base64_encode() to encode the API key for HTTP Basic Authentication in the Authorization header.
  */
 function upload_results( $results, $rev, $message, $env, $api_key ) {
-	$WPT_REPORT_URL = getenv( 'WPT_REPORT_URL' );
-	if ( ! $WPT_REPORT_URL ) {
-		$WPT_REPORT_URL = 'https://make.wordpress.org/hosting/wp-json/wp-unit-test-api/v1/results';
+	$wpt_report_url = getenv( 'WPT_REPORT_URL' );
+	if ( ! $wpt_report_url ) {
+		$wpt_report_url = 'https://make.wordpress.org/hosting/wp-json/wp-unit-test-api/v1/results';
 	}
-	$process = curl_init( $WPT_REPORT_URL );
+	$process      = curl_init( $wpt_report_url );
 	$access_token = base64_encode( $api_key );
-	$data = array(
+	$data         = array(
 		'results' => $results,
 		'commit'  => $rev,
 		'message' => $message,
 		'env'     => $env,
 	);
-	$data_string = json_encode( $data );
+	$data_string  = json_encode( $data );
 
 	curl_setopt( $process, CURLOPT_TIMEOUT, 30 );
 	curl_setopt( $process, CURLOPT_POST, 1 );
@@ -297,13 +293,17 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 	curl_setopt( $process, CURLOPT_USERAGENT, 'WordPress PHPUnit Test Runner' );
 	curl_setopt( $process, CURLOPT_POSTFIELDS, $data_string );
 	curl_setopt( $process, CURLOPT_RETURNTRANSFER, true );
-	curl_setopt( $process, CURLOPT_HTTPHEADER, array(
-		"Authorization: Basic $access_token",
-		'Content-Type: application/json',
-		'Content-Length: ' . strlen( $data_string )
-	));
+	curl_setopt(
+		$process,
+		CURLOPT_HTTPHEADER,
+		array(
+			"Authorization: Basic $access_token",
+			'Content-Type: application/json',
+			'Content-Length: ' . strlen( $data_string ),
+		)
+	);
 
-	$return = curl_exec( $process );
+	$return      = curl_exec( $process );
 	$status_code = curl_getinfo( $process, CURLINFO_HTTP_CODE );
 	curl_close( $process );
 
@@ -335,23 +335,23 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 function get_env_details() {
 
 	$gd_info = array();
-	if( extension_loaded( 'gd' ) ) {
+	if ( extension_loaded( 'gd' ) ) {
 		$gd_info = gd_info();
 	}
 	$imagick_info = array();
-	if( extension_loaded( 'imagick' ) ) {
+	if ( extension_loaded( 'imagick' ) ) {
 		$imagick_info = Imagick::queryFormats();
 	}
 
 	$env = array(
-		'php_version'    => phpversion(),
-		'php_modules'    => array(),
-		'gd_info'        => $gd_info,
-		'imagick_info'   => $imagick_info,
-		'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
-		'system_utils'   => array(),
-		'os_name'        => trim( shell_exec( 'uname -s' ) ),
-		'os_version'     => trim( shell_exec( 'uname -r' ) ),
+		'php_version'   => phpversion(),
+		'php_modules'   => array(),
+		'gd_info'       => $gd_info,
+		'imagick_info'  => $imagick_info,
+		'mysql_version' => trim( shell_exec( 'mysql --version' ) ),
+		'system_utils'  => array(),
+		'os_name'       => trim( shell_exec( 'uname -s' ) ),
+		'os_version'    => trim( shell_exec( 'uname -r' ) ),
 	);
 	unset( $gd_info, $imagick_info );
 
@@ -392,23 +392,25 @@ function get_env_details() {
 		'zip',
 		'zlib',
 	);
-	foreach( $php_modules as $php_module ) {
+	foreach ( $php_modules as $php_module ) {
 		$env['php_modules'][ $php_module ] = phpversion( $php_module );
 	}
 
-	function curl_selected_bits($k) { return in_array($k, array('version', 'ssl_version', 'libz_version')); }
-	$curl_bits = curl_version();
-	$env['system_utils']['curl'] = implode(' ',array_values(array_filter($curl_bits, 'curl_selected_bits',ARRAY_FILTER_USE_KEY) ));
-
-	$WPT_DB_HOST		 	= trim( getenv( 'WPT_DB_HOST' ) );
-	if( ! $WPT_DB_HOST ) {
-		$WPT_DB_HOST = 'localhost';
+	function curl_selected_bits( $k ) {
+		return in_array( $k, array( 'version', 'ssl_version', 'libz_version' ), true );
 	}
-	$WPT_DB_USER 			= trim( getenv( 'WPT_DB_USER' ) );
-	$WPT_DB_PASSWORD 	= trim( getenv( 'WPT_DB_PASSWORD' ) );
-	$WPT_DB_NAME 			= trim( getenv( 'WPT_DB_NAME' ) );
+	$curl_bits                   = curl_version();
+	$env['system_utils']['curl'] = implode( ' ', array_values( array_filter( $curl_bits, 'curl_selected_bits', ARRAY_FILTER_USE_KEY ) ) );
 
-	//$mysqli = new mysqli( $WPT_DB_HOST, $WPT_DB_USER, $WPT_DB_PASSWORD, $WPT_DB_NAME );
+	$wpt_db_host = trim( getenv( 'WPT_DB_HOST' ) );
+	if ( ! $wpt_db_host ) {
+		$wpt_db_host = 'localhost';
+	}
+	$wpt_db_user     = trim( getenv( 'WPT_DB_USER' ) );
+	$wpt_db_password = trim( getenv( 'WPT_DB_PASSWORD' ) );
+	$wpt_db_name     = trim( getenv( 'WPT_DB_NAME' ) );
+
+	//$mysqli = new mysqli( $wpt_db_host, $wpt_db_user, $wpt_db_password, $wpt_db_name );
 	//$env['mysql_version'] = $mysqli->query("SELECT VERSION()")->fetch_row()[0];
 	//$mysqli->close();
 
