@@ -3,7 +3,7 @@
  * Executes the PHPUnit test suite within the WordPress testing environment.
  * This script is designed to run tests either locally or on a remote server based on the environment setup.
  * It dynamically constructs the command to run PHPUnit and then executes it.
- * 
+ *
  * @link https://github.com/wordpress/phpunit-test-runner/ Original source repository
  * @package WordPress
  */
@@ -22,40 +22,40 @@ check_required_env();
 $runner_vars = setup_runner_env_vars();
 
 // Uses the flavor (usually to test WordPress Multisite)
-$WPT_FLAVOR_INI = trim( getenv( 'WPT_FLAVOR' ) );
-switch( $WPT_FLAVOR_INI ) {
+$wpt_flavor_ini = trim( getenv( 'WPT_FLAVOR' ) );
+switch ( $wpt_flavor_ini ) {
 	case 0:
-		$WPT_FLAVOR_TXT = ''; // Simple WordPress
+		$wpt_flavor_txt = ''; // Simple WordPress
 		break;
 	case 1:
-		$WPT_FLAVOR_TXT = ' -c tests/phpunit/multisite.xml'; // WordPress Multisite
+		$wpt_flavor_txt = ' -c tests/phpunit/multisite.xml'; // WordPress Multisite
 		break;
 	default:
-		$WPT_FLAVOR_TXT = '';
+		$wpt_flavor_txt = '';
 		break;
 }
-unset( $WPT_FLAVOR_INI );
+unset( $wpt_flavor_ini );
 
 // Uses the extra tests group (e.g., ajax, ms-files, external-http)
-$WPT_EXTRATESTS_INI = trim( getenv( 'WPT_EXTRATESTS' ) );
-switch( $WPT_EXTRATESTS_INI ) {
+$wpt_extratests_ini = trim( getenv( 'WPT_EXTRATESTS' ) );
+switch ( $wpt_extratests_ini ) {
 	case 0:
-		$WPT_EXTRATESTS_TXT = ''; // no extra tests
+		$wpt_extratests_txt = ''; // no extra tests
 		break;
 	case 1:
-		$WPT_EXTRATESTS_TXT = ' --group ajax'; // ajax tests
+		$wpt_extratests_txt = ' --group ajax'; // ajax tests
 		break;
 	case 2:
-		$WPT_EXTRATESTS_TXT = ' --group ms-files'; // ms-files tests
+		$wpt_extratests_txt = ' --group ms-files'; // ms-files tests
 		break;
 	case 3:
-		$WPT_EXTRATESTS_TXT = ' --group external-http'; // external-http tests
+		$wpt_extratests_txt = ' --group external-http'; // external-http tests
 		break;
 	default:
-		$WPT_EXTRATESTS_TXT = '';
+		$wpt_extratests_txt = '';
 		break;
 }
-unset( $WPT_EXTRATESTS_INI );
+unset( $wpt_extratests_ini );
 
 /**
  * Determines the PHPUnit command to execute the test suite.
@@ -64,17 +64,19 @@ unset( $WPT_EXTRATESTS_INI );
  * the test directory path from environment variables, appending parameters to the PHPUnit call to
  * avoid reporting useless tests.
  */
-$WPT_PHPUNIT_CMD = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
-if( empty( $WPT_PHPUNIT_CMD ) ) {
-	$WPT_PHPUNIT_CMD = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $WPT_FLAVOR_TXT . $WPT_EXTRATESTS_TXT;
+$wpt_phpunit_cmd = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
+if ( empty( $wpt_phpunit_cmd ) ) {
+	$wpt_phpunit_cmd = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $wpt_flavor_txt . $wpt_extratests_txt;
 }
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	$WPT_PHPUNIT_CMD = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $WPT_PHPUNIT_CMD );
+	$wpt_phpunit_cmd = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $wpt_phpunit_cmd );
 }
 
 // Execute the PHPUnit command.
-perform_operations( array(
-	$WPT_PHPUNIT_CMD
-) );
+perform_operations(
+	array(
+		$wpt_phpunit_cmd,
+	)
+);
