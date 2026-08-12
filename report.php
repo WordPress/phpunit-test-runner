@@ -18,36 +18,9 @@ require __DIR__ . '/functions.php';
 check_required_env( false );
 
 /**
- * Retrieves environment variables and sets defaults for test preparation.
- * These variables are used to configure SSH connections, file paths, and
- * executable commands needed for setting up the test environment.
+ * Ensure that optional environment variables are present with default values.
  */
-$WPT_SSH_CONNECT    = trim( getenv( 'WPT_SSH_CONNECT' ) );
-$WPT_TEST_DIR       = trim( getenv( 'WPT_TEST_DIR' ) );
-$WPT_PREPARE_DIR    = trim( getenv( 'WPT_PREPARE_DIR' ) );
-$WPT_SSH_OPTIONS    = trim( getenv( 'WPT_SSH_OPTIONS' ) );
-$WPT_REPORT_API_KEY = trim( getenv( 'WPT_REPORT_API_KEY' ) );
-
-/**
- * Determines if the debug mode is enabled based on the 'WPT_DEBUG' environment variable.
- * The debug mode can affect error reporting and other debug-related settings.
- */
-$WPT_DEBUG_INI = getenv( 'WPT_DEBUG' );
-switch( $WPT_DEBUG_INI ) {
-	case 0:
-	case 'false':
-		$WPT_DEBUG = false;
-		break;
-	case 1:
-	case 'true':
-	case 'verbose':
-		$WPT_DEBUG = 'verbose';
-		break;
-	default:
-		$WPT_DEBUG = false;
-		break;
-}
-unset( $WPT_DEBUG_INI );
+$runner_vars = setup_runner_env_vars();
 
 /**
  * Retrieves the SVN revision number from the git repository log.
@@ -56,8 +29,8 @@ unset( $WPT_DEBUG_INI );
  * WPT_PREPARE_DIR environment variable, retrieves the latest commit message,
  * and extracts the SVN revision number using a combination of grep and cut commands.
  */
-log_message('Getting SVN Revision');
-$rev = exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
+log_message( 'Getting SVN Revision' );
+$rev = exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2' );
 
 /**
  * Retrieves the latest SVN commit message from the git repository log.
@@ -65,8 +38,8 @@ $rev = exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -
  * that accesses the git directory specified by the WPT_PREPARE_DIR environment variable,
  * fetches the latest commit message, and trims any whitespace from the message.
  */
-log_message('Getting SVN message');
-$message = trim( exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/.git log -1 --pretty=%B | head -1') );
+log_message( 'Getting SVN message' );
+$message = trim( exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | head -1' ) );
 
 /**
  * Prepares the file path for copying the junit.xml results.
@@ -75,9 +48,8 @@ $message = trim( exec('git --git-dir=' . escapeshellarg( $WPT_PREPARE_DIR ) . '/
  * making use of the WPT_TEST_DIR environment variable. The path is sanitized to be
  * safely used in shell commands.
  */
-log_message('Copying junit.xml results');
-$junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*';
-
+log_message( 'Copying junit.xml results' );
+$junit_location = escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . '/tests/phpunit/build/logs/*';
 /**
  * Modifies the junit.xml results file path for a remote location if an SSH connection is available.
  * If the WPT_SSH_CONNECT environment variable is not empty, indicating that an SSH connection
@@ -85,8 +57,8 @@ $junit_location = escapeshellarg( $WPT_TEST_DIR ) . '/tests/phpunit/build/logs/*
  * command and options for accessing the remote file system. It concatenates SSH options with the
  * remote path to ensure that the junit.xml results can be accessed or copied over SSH.
  */
-if ( ! empty( $WPT_SSH_CONNECT ) ) {
-	$junit_location = '-e "ssh ' . $WPT_SSH_OPTIONS . '" ' . escapeshellarg( $WPT_SSH_CONNECT . ':' . $junit_location );
+if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+	$junit_location = '-e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $junit_location );
 }
 
 /**
@@ -97,7 +69,7 @@ if ( ! empty( $WPT_SSH_CONNECT ) ) {
  */
 $rsync_options = '-r';
 
-if ( 'verbose' === $WPT_DEBUG ) {
+if ( $runner_vars['WPT_DEBUG'] ) {
 	$rsync_options = $rsync_options . 'v';
 }
 
@@ -108,10 +80,12 @@ if ( 'verbose' === $WPT_DEBUG ) {
  * then passed to the `perform_operations` function, which executes the command to synchronize
  * the junit.xml files from the source to the destination directory.
  */
-$junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $WPT_PREPARE_DIR );
-perform_operations( array(
-	$junit_exec,
-) );
+$junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] );
+perform_operations(
+	array(
+		$junit_exec,
+	)
+);
 
 /**
  * Processes and uploads the junit.xml file.
@@ -121,7 +95,7 @@ perform_operations( array(
  * it for upload or to extract relevant test run information.
  */
 log_message( 'Processing and uploading junit.xml' );
-$xml = file_get_contents( $WPT_PREPARE_DIR . '/junit.xml' );
+$xml     = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/junit.xml' );
 $results = process_junit_xml( $xml );
 
 /**
@@ -132,9 +106,9 @@ $results = process_junit_xml( $xml );
  * are generated by calling a function that retrieves these details, then encoded into JSON format.
  */
 $env = '';
-if ( file_exists( $WPT_PREPARE_DIR . '/env.json' ) ) {
-	$env = file_get_contents( $WPT_PREPARE_DIR . '/env.json' );
-} elseif ( $WPT_PREPARE_DIR === $WPT_TEST_DIR ) {
+if ( file_exists( $runner_vars['WPT_PREPARE_DIR'] . '/env.json' ) ) {
+	$env = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/env.json' );
+} elseif ( $runner_vars['WPT_PREPARE_DIR'] === $runner_vars['WPT_TEST_DIR'] ) {
 	$env = json_encode( get_env_details(), JSON_PRETTY_PRINT );
 }
 
@@ -146,34 +120,33 @@ if ( file_exists( $WPT_PREPARE_DIR . '/env.json' ) ) {
  * message is logged along with the HTTP status. If no API key is provided, it logs the test results
  * and environment details locally.
  */
-if( ! empty( $WPT_REPORT_API_KEY ) ) {
+if ( ! empty( $runner_vars['WPT_REPORT_API_KEY'] ) ) {
 
 	// Upload the results and capture the HTTP status and response body
-	list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $env, $WPT_REPORT_API_KEY );
+	list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $env, $runner_vars['WPT_REPORT_API_KEY'] );
 
 	// Decode the JSON response body
 	$response = json_decode( $response_body, true );
-	if ( 20 == substr( $http_status, 0, 2 ) ) {
+	if ( 20 == substr( $http_status, 0, 2 ) ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
 
 		// Construct and log a success message with a link if provided in the response
-		$message = 'Results successfully uploaded';
+		$message  = 'Results successfully uploaded';
 		$message .= isset( $response['link'] ) ? ': ' . $response['link'] : '';
 		log_message( $message );
 
 	} else {
 
 		// Construct and log an error message with additional details if provided in the response
-		$message = 'Error uploading results';
+		$message  = 'Error uploading results';
 		$message .= isset( $response['message'] ) ? ': ' . $response['message'] : '';
 		$message .= ' (HTTP status ' . (int) $http_status . ')';
 		error_message( $message );
 
 	}
-
 } else {
 
 	// Log the test results and environment details locally if no API key is provided
-	log_message( '[+] TEST RESULTS' . "\n\n" . $results. "\n\n" );
+	log_message( '[+] TEST RESULTS' . "\n\n" . $results . "\n\n" );
 	log_message( '[+] ENVIRONMENT' . "\n\n" . $env . "\n\n" );
 
 }

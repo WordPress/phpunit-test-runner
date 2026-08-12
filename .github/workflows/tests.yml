@@ -43,7 +43,7 @@ jobs:
   test:
     name: Run Core PHPUnit tests
     runs-on: ubuntu-latest
-    
+
     # Remove this line if Github Actions is your preferred means of running the tests.
     if: ${{ false }}
 
@@ -64,18 +64,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@c5fc0d8281aba02c7fda07d3a70cc5371548067d # v2.25.2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '7.4'
           coverage: none
 
       - name: Install NodeJS
-        uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 14
+          node-version: 24
 
       - name: Prepare environment
         run: php prepare.php
