@@ -387,6 +387,28 @@ journalctl -u wordpressphpunittestrunner.timer
 journalctl -n 120 -u wordpressphpunittestrunner.service
 ```
 
+## Multiple PHP versions, environments, and commits
+
+These options are configured in `.env`. Broader documentation updates live in a separate pull request; this section only covers the runner behavior added for multi-PHP, environment labels, and commit tracking.
+
+**Environment label.** Set `WPT_LABEL` to a short alphanumeric keyword such as `shared`, `vps`, or `cloud`. The label is included in the reported environment details so results from different setups on the same host can be distinguished.
+
+**Multiple PHP versions.** `WPT_PHP_EXECUTABLE` still defaults to `php`. A single binary path continues to work as before. To test more than one version, use `version=path` entries separated by semicolons:
+
+```bash
+export WPT_PHP_EXECUTABLE="8.1=/bin/php8.1;8.2=/bin/php8.2;8.3=/bin/php8.3"
+```
+
+Each version uses its own prepare/test directory (the version is appended in plain text, for example `/tmp/wp-test-runner-8-1`) and a unique database table prefix so runs do not collide.
+
+**Commit tracking.** The runner writes `commits.json` (gitignored; copied from `commits.json.example` when missing):
+
+- `executed_commits`: SHAs that were successfully tested and reported
+- `pending_commits`: SHAs waiting to be tested (oldest first)
+- `testing_commit`: the SHA currently being tested (at most one)
+
+`WPT_COMMITS=0` tests only the latest commit when the runner starts. `WPT_COMMITS=1` queries the last 30 wordpress-develop commits (the GitHub API default page size) and queues any that have not been tested yet. In both modes, a commit already present in `commits.json` is skipped.
+
 ## Contributing
 
 If you have questions about the process or run into test failures along the way, please [open an issue in the project repository](https://github.com/WordPress/phpunit-test-runner/issues) and we’ll help diagnose/get the documentation updated. Alternatively, you can also pop into the `#hosting` channel on [WordPress.org Slack](https://make.wordpress.org/chat/) for help.

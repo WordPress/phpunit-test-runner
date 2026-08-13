@@ -20,32 +20,28 @@ check_required_env();
  */
 $runner_vars = setup_runner_env_vars();
 
-/**
- * The directory path of the test preparation directory is assumed to be previously defined.
- * For example: $runner_vars['WPT_PREPARE_DIR'] = '/path/to/your/preparation/dir';
- * Clean up the preparation directory.
- * Forcefully deletes only the .git directory and the node_modules cache.
- * Afterward, the entire preparation directory is removed to ensure a clean state for the next test run.
- */
-perform_operations(
-	array(
-		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
-		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
-		'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
-	)
-);
+skip_if_no_prepared_environment( $runner_vars );
 
-/**
- * Cleans up the test directory on a remote server.
- * This conditional block checks if an SSH connection string is provided and is not empty.
- * If a connection string is present, it triggers a cleanup operation on the remote environment.
- * The cleanup operation is executed by the `perform_operations` function which takes an array
- * of shell commands as its input.
- */
-if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	perform_operations(
-		array(
-			'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
-		)
-	);
+foreach ( $runner_vars['WPT_PHP_EXECUTABLES'] as $php ) {
+	$paths = get_php_run_paths( $runner_vars, $php );
+
+	log_message( 'Cleaning environment for PHP ' . $php['version'] );
+
+	if ( is_dir( $paths['prepare_dir'] ) ) {
+		perform_operations(
+			array(
+				'rm -rf ' . escapeshellarg( $paths['prepare_dir'] . '/.git' ),
+				'rm -rf ' . escapeshellarg( $paths['prepare_dir'] . '/node_modules/.cache' ),
+				'rm -r ' . escapeshellarg( $paths['prepare_dir'] ),
+			)
+		);
+	}
+
+	if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+		perform_operations(
+			array(
+				'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $paths['rm_cmd'] ),
+			)
+		);
+	}
 }

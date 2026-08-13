@@ -73,6 +73,14 @@ function setup_runner_env_vars() {
 	$ssh_options = trim( getenv( 'WPT_SSH_OPTIONS' ) );
 	$php_exec    = trim( getenv( 'WPT_PHP_EXECUTABLE' ) );
 	$rm_test_dir = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) );
+	$label       = trim( getenv( 'WPT_LABEL' ) );
+	$commits     = strtolower( trim( (string) getenv( 'WPT_COMMITS' ) ) );
+
+	if ( '' === $php_exec ) {
+		$php_exec = 'php';
+	}
+
+	$php_executables = parse_php_executables( $php_exec );
 
 	$runner_configuration = array(
 		'WPT_TEST_DIR' => '' !== $test_dir ? $test_dir : '/tmp/wp-test-runner',
@@ -84,12 +92,439 @@ function setup_runner_env_vars() {
 			'WPT_PREPARE_DIR'     => '' !== $prepare_dir ? $prepare_dir : '/tmp/wp-test-runner',
 			'WPT_SSH_CONNECT'     => trim( getenv( 'WPT_SSH_CONNECT' ) ),
 			'WPT_SSH_OPTIONS'     => '' !== $ssh_options ? $ssh_options : '-o StrictHostKeyChecking=no',
-			'WPT_PHP_EXECUTABLE'  => '' !== $php_exec ? $php_exec : 'php',
+			'WPT_PHP_EXECUTABLE'  => $php_executables[0]['bin'],
+			'WPT_PHP_EXECUTABLES' => $php_executables,
 			'WPT_RM_TEST_DIR_CMD' => '' !== $rm_test_dir ? $rm_test_dir : 'rm -r ' . $runner_configuration['WPT_TEST_DIR'],
 			'WPT_REPORT_API_KEY'  => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
 			'WPT_DEBUG'           => (bool) getenv( 'WPT_DEBUG' ),
+			'WPT_LABEL'           => $label,
+			'WPT_COMMITS'         => ( '1' === $commits || 'true' === $commits || 'on' === $commits ),
 		)
 	);
+}
+
+/**
+ * Converts a PHP version string into a filesystem-safe directory suffix.
+ *
+ * @param string $version PHP version such as '8.1' or 'default'.
+ * @return string Version with dots replaced by hyphens.
+ */
+function directory_name_from_php_version( $version ) {
+	return str_replace( '.', '-', (string) $version );
+}
+
+/**
+ * Parses WPT_PHP_EXECUTABLE into one or more PHP binaries.
+ *
+ * A single value such as `php` or `/usr/bin/php8.1` is treated as one executable.
+ * Values containing `=` and/or `;` are treated as a version=path map, for example
+ * `8.1=/bin/php8.1;8.2=/bin/php8.2`.
+ *
+ * @param string $php_executable Raw WPT_PHP_EXECUTABLE value.
+ * @return array[] {
+ *     @type array ...$0 {
+ *         @type string $version Version label (`default` for a single binary).
+ *         @type string $bin     Path or command used to invoke PHP.
+ *         @type string $suffix  Directory suffix; empty for a single binary.
+ *     }
+ * }
+ */
+function parse_php_executables( $php_executable ) {
+	$php_executable = trim( $php_executable );
+	if ( '' === $php_executable ) {
+		$php_executable = 'php';
+	}
+
+	$is_multi = ( false !== strpos( $php_executable, '=' ) || false !== strpos( $php_executable, ';' ) );
+
+	if ( ! $is_multi ) {
+		return array(
+			array(
+				'version' => 'default',
+				'bin'     => $php_executable,
+				'suffix'  => '',
+			),
+		);
+	}
+
+	$executables = array();
+	$entries     = explode( ';', $php_executable );
+	foreach ( $entries as $entry ) {
+		$entry = trim( $entry );
+		if ( '' === $entry ) {
+			continue;
+		}
+
+		$parts = array_map( 'trim', explode( '=', $entry, 2 ) );
+		if ( 2 !== count( $parts ) || '' === $parts[0] || '' === $parts[1] ) {
+			continue;
+		}
+
+		$executables[] = array(
+			'version' => $parts[0],
+			'bin'     => $parts[1],
+			'suffix'  => '-' . directory_name_from_php_version( $parts[0] ),
+		);
+	}
+
+	if ( empty( $executables ) ) {
+		return array(
+			array(
+				'version' => 'default',
+				'bin'     => 'php',
+				'suffix'  => '',
+			),
+		);
+	}
+
+	return $executables;
+}
+
+/**
+ * Returns prepare/test directory paths for a parsed PHP executable.
+ *
+ * @param array $runner_vars Configuration from setup_runner_env_vars().
+ * @param array $php         One item from parse_php_executables().
+ * @return array {
+ *     @type string $prepare_dir Prepare directory for this PHP version.
+ *     @type string $test_dir    Test directory for this PHP version.
+ *     @type string $rm_cmd      Command used to remove the test directory.
+ * }
+ */
+function get_php_run_paths( $runner_vars, $php ) {
+	$prepare_dir = $runner_vars['WPT_PREPARE_DIR'] . $php['suffix'];
+	$test_dir    = $runner_vars['WPT_TEST_DIR'] . $php['suffix'];
+	$custom_rm   = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) );
+
+	if ( '' !== $custom_rm && '' === $php['suffix'] ) {
+		$rm_cmd = $custom_rm;
+	} else {
+		$rm_cmd = 'rm -r ' . $test_dir;
+	}
+
+	return array(
+		'prepare_dir' => $prepare_dir,
+		'test_dir'    => $test_dir,
+		'rm_cmd'      => $rm_cmd,
+	);
+}
+
+/**
+ * Whether any versioned prepare directory already exists.
+ *
+ * @param array $runner_vars Configuration from setup_runner_env_vars().
+ * @return bool
+ */
+function any_prepare_directory_exists( $runner_vars ) {
+	foreach ( $runner_vars['WPT_PHP_EXECUTABLES'] as $php ) {
+		$paths = get_php_run_paths( $runner_vars, $php );
+		if ( is_dir( $paths['prepare_dir'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Exits successfully when prepare did not create an environment (nothing to test).
+ *
+ * @param array $runner_vars Configuration from setup_runner_env_vars().
+ * @return void
+ */
+function skip_if_no_prepared_environment( $runner_vars ) {
+	if ( any_prepare_directory_exists( $runner_vars ) ) {
+		return;
+	}
+
+	log_message( 'No prepared test environment found. Skipping.' );
+	exit( 0 );
+}
+
+/**
+ * Absolute path to the runner's commits.json state file.
+ *
+ * @return string
+ */
+function runner_commits_file_path() {
+	return __DIR__ . '/commits.json';
+}
+
+/**
+ * Default commits.json structure.
+ *
+ * executed_commits: SHAs that were successfully tested and reported.
+ * pending_commits: SHAs queued to be tested, oldest first.
+ * testing_commit: SHA currently being tested (empty string if none). Never more than one.
+ *
+ * @return array
+ */
+function default_commits_state() {
+	return array(
+		'executed_commits' => array(),
+		'pending_commits'  => array(),
+		'testing_commit'   => '',
+	);
+}
+
+/**
+ * Creates commits.json from the example file when it is missing.
+ *
+ * @return void
+ */
+function ensure_commits_file() {
+	$file    = runner_commits_file_path();
+	$example = __DIR__ . '/commits.json.example';
+
+	if ( file_exists( $file ) ) {
+		return;
+	}
+
+	if ( file_exists( $example ) ) {
+		copy( $example, $file );
+		return;
+	}
+
+	save_commits_state( default_commits_state() );
+}
+
+/**
+ * Loads and normalizes commits.json.
+ *
+ * @return array
+ */
+function load_commits_state() {
+	ensure_commits_file();
+
+	$decoded = json_decode( (string) file_get_contents( runner_commits_file_path() ), true );
+	$state   = default_commits_state();
+
+	if ( ! is_array( $decoded ) ) {
+		return $state;
+	}
+
+	if ( ! empty( $decoded['executed_commits'] ) && is_array( $decoded['executed_commits'] ) ) {
+		$state['executed_commits'] = array_values( array_filter( $decoded['executed_commits'] ) );
+	}
+
+	if ( ! empty( $decoded['pending_commits'] ) && is_array( $decoded['pending_commits'] ) ) {
+		$state['pending_commits'] = array_values( array_filter( $decoded['pending_commits'] ) );
+	}
+
+	if ( isset( $decoded['testing_commit'] ) ) {
+		if ( is_array( $decoded['testing_commit'] ) ) {
+			$state['testing_commit'] = ! empty( $decoded['testing_commit'][0] ) ? (string) $decoded['testing_commit'][0] : '';
+		} else {
+			$state['testing_commit'] = (string) $decoded['testing_commit'];
+		}
+	}
+
+	return $state;
+}
+
+/**
+ * Writes commits.json.
+ *
+ * @param array $state Commit tracking state.
+ * @return void
+ */
+function save_commits_state( $state ) {
+	$state = array_merge( default_commits_state(), $state );
+	file_put_contents(
+		runner_commits_file_path(),
+		json_encode( $state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n"
+	);
+}
+
+/**
+ * SHAs already known to the runner (executed, pending, or in progress).
+ *
+ * @param array $state Commit tracking state.
+ * @return string[]
+ */
+function known_commit_shas( $state ) {
+	$testing = '' !== $state['testing_commit'] ? array( $state['testing_commit'] ) : array();
+
+	return array_values(
+		array_unique(
+			array_merge( $state['executed_commits'], $state['pending_commits'], $testing )
+		)
+	);
+}
+
+/**
+ * Fetches a URL body using cURL when available, otherwise file_get_contents().
+ *
+ * @param string $url URL to fetch.
+ * @return string|false Response body, or false on failure.
+ */
+function fetch_url_contents( $url ) {
+	if ( function_exists( 'curl_init' ) ) {
+		$process = curl_init( $url );
+		curl_setopt( $process, CURLOPT_TIMEOUT, 30 );
+		curl_setopt( $process, CURLOPT_RETURNTRANSFER, true );
+		curl_setopt( $process, CURLOPT_USERAGENT, 'WordPress PHPUnit Test Runner' );
+		curl_setopt(
+			$process,
+			CURLOPT_HTTPHEADER,
+			array(
+				'Accept: application/vnd.github+json',
+			)
+		);
+
+		$response    = curl_exec( $process );
+		$status_code = (int) curl_getinfo( $process, CURLINFO_HTTP_CODE );
+		curl_close( $process );
+
+		if ( 200 !== $status_code || false === $response ) {
+			return false;
+		}
+
+		return $response;
+	}
+
+	$context = stream_context_create(
+		array(
+			'http' => array(
+				'method'  => 'GET',
+				'header'  => "User-Agent: WordPress PHPUnit Test Runner\r\nAccept: application/vnd.github+json\r\n",
+				'timeout' => 30,
+			),
+		)
+	);
+
+	return file_get_contents( $url, false, $context );
+}
+
+/**
+ * Fetches recent wordpress-develop commit SHAs from the GitHub API (newest first).
+ *
+ * The GitHub API defaults to 30 results per page and caps at 100.
+ *
+ * @param int $per_page Number of commits to request. Default 30.
+ * @return string[]
+ */
+function fetch_wordpress_develop_commit_shas( $per_page = 30 ) {
+	$per_page = (int) $per_page;
+	if ( $per_page < 1 ) {
+		$per_page = 1;
+	} elseif ( $per_page > 100 ) {
+		$per_page = 100;
+	}
+
+	$url      = 'https://api.github.com/repos/WordPress/wordpress-develop/commits?per_page=' . $per_page;
+	$response = fetch_url_contents( $url );
+
+	if ( false === $response ) {
+		log_message( 'Warning: Could not fetch wordpress-develop commits from GitHub API.' );
+		return array();
+	}
+
+	$decoded = json_decode( $response, true );
+	if ( ! is_array( $decoded ) ) {
+		return array();
+	}
+
+	$shas = array();
+	foreach ( $decoded as $commit ) {
+		if ( ! empty( $commit['sha'] ) ) {
+			$shas[] = $commit['sha'];
+		}
+	}
+
+	return $shas;
+}
+
+/**
+ * Resolves the current wordpress-develop HEAD SHA via git ls-remote.
+ *
+ * @return string SHA or an empty string on failure.
+ */
+function fetch_wordpress_develop_head_sha() {
+	$output = array();
+	$retval = 0;
+	exec( 'git ls-remote https://github.com/WordPress/wordpress-develop.git HEAD', $output, $retval );
+	if ( 0 !== $retval || empty( $output[0] ) ) {
+		return '';
+	}
+
+	$parts = preg_split( '/\s+/', trim( $output[0] ) );
+	return isset( $parts[0] ) ? $parts[0] : '';
+}
+
+/**
+ * Queues untested wordpress-develop commits and returns the SHA to test next.
+ *
+ * When $fetch_history is true, the last 30 commits are considered. When false,
+ * only the most recent commit is considered. Already tested SHAs are skipped
+ * using commits.json in both cases.
+ *
+ * @param bool $fetch_history Whether to queue the last 30 commits.
+ * @return string SHA to test, `HEAD` when the SHA could not be resolved, or an empty string when there is nothing new to test.
+ */
+function select_commit_to_test( $fetch_history ) {
+	$state = load_commits_state();
+
+	if ( '' !== $state['testing_commit'] ) {
+		log_message( 'Resuming tests for wordpress-develop commit ' . $state['testing_commit'] );
+		return $state['testing_commit'];
+	}
+
+	$per_page = $fetch_history ? 30 : 1;
+	$remote   = fetch_wordpress_develop_commit_shas( $per_page );
+
+	if ( empty( $remote ) ) {
+		$head = fetch_wordpress_develop_head_sha();
+		if ( '' !== $head ) {
+			$remote = array( $head );
+		}
+	}
+
+	if ( empty( $remote ) ) {
+		log_message( 'Warning: Could not resolve wordpress-develop commits; falling back to cloned HEAD.' );
+		return 'HEAD';
+	}
+
+	$candidates = $fetch_history ? array_reverse( $remote ) : array( $remote[0] );
+	$known      = known_commit_shas( $state );
+
+	foreach ( $candidates as $candidate ) {
+		if ( ! in_array( $candidate, $known, true ) ) {
+			$state['pending_commits'][] = $candidate;
+			$known[]                    = $candidate;
+		}
+	}
+
+	$state['pending_commits'] = array_values( array_unique( $state['pending_commits'] ) );
+
+	if ( empty( $state['pending_commits'] ) ) {
+		save_commits_state( $state );
+		return '';
+	}
+
+	$sha                     = array_shift( $state['pending_commits'] );
+	$state['testing_commit'] = $sha;
+	save_commits_state( $state );
+	log_message( 'Selected wordpress-develop commit ' . $sha );
+
+	return $sha;
+}
+
+/**
+ * Moves the in-progress testing commit to executed_commits after a successful report.
+ *
+ * @return void
+ */
+function mark_testing_commit_executed() {
+	$state = load_commits_state();
+	if ( '' === $state['testing_commit'] ) {
+		return;
+	}
+
+	$state['executed_commits'][] = $state['testing_commit'];
+	$state['executed_commits']   = array_values( array_unique( $state['executed_commits'] ) );
+	$state['testing_commit']     = '';
+	save_commits_state( $state );
 }
 
 /**
@@ -344,6 +779,7 @@ function get_env_details() {
 	}
 
 	$env = array(
+		'label'         => trim( getenv( 'WPT_LABEL' ) ),
 		'php_version'   => phpversion(),
 		'php_modules'   => array(),
 		'gd_info'       => $gd_info,
