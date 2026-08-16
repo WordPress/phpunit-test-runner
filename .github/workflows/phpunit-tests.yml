@@ -1,0 +1,90 @@
+name: PHPUnit Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.php'
+      - '.github/workflows/phpunit-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} / MySQL ${{ matrix.db-version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '7.4', '8.0', '8.2' ]
+        db-version: [ '8.0' ]
+
+    services:
+      mysql:
+        image: mysql:${{ matrix.db-version }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_USER: wp_test
+          MYSQL_PASSWORD: wp_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    env:
+      WPT_PREPARE_DIR: /tmp/wp-test-runner
+      WPT_TEST_DIR: /tmp/wp-test-runner
+      WPT_DB_NAME: wordpress_test
+      WPT_DB_USER: wp_test
+      WPT_DB_PASSWORD: wp_test
+      WPT_DB_HOST: 127.0.0.1
+      WPT_REPORT_API_KEY: ''
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Prepare environment
+        run: php prepare.php
+
+      - name: Run unit tests
+        run: php test.php
+        continue-on-error: true
+
+      - name: Report results
+        run: php report.php
+        continue-on-error: true
+
+      - name: Cleanup
+        run: php cleanup.php
