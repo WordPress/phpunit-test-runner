@@ -193,9 +193,9 @@ function curl_selected_bits(\$k) { return in_array(\$k, array('version', 'ssl_ve
 if ( class_exists( 'Imagick' ) ) {
 	\$imagick = new Imagick();
 	\$version = \$imagick->getVersion();
-	preg_match('/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$matches);
-	\$env['system_utils']['imagemagick'] = \$matches[1] ?? 'Unknown';
-} elseif (class_exists('Gmagick')) {
+	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$version );
+	\$env['system_utils']['imagemagick'] = \$version[1];
+} elseif ( class_exists( 'Gmagick' ) ) {
 	\$gmagick = new Gmagick();
 	\$version = \$gmagick->getVersion();
 	preg_match('/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$matches);

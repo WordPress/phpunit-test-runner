@@ -38,7 +38,7 @@ function check_required_env( $check_db = true ) {
 	}
 
 	if ( empty( getenv( 'WPT_SSH_CONNECT' ) )
-	     && getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
+		&& getenv( 'WPT_TEST_DIR' ) !== getenv( 'WPT_PREPARE_DIR' ) ) {
 		error_message( 'WPT_TEST_DIR must be the same as WPT_PREPARE_DIR when running locally.' );
 	}
 
@@ -129,7 +129,7 @@ function perform_operations( $operations ) {
 		// Check for command execution failure.
 		if ( 0 !== $return_code ) {
 			error_message( 'Failed to perform operation: ' . $operation . '.' );
-			return; // Halt execution on the first failure.
+			return;
 		}
 	}
 }
@@ -151,7 +151,7 @@ function perform_operations( $operations ) {
  * output, standard error, and regular files.
  */
 function log_message( $message ) {
-	fwrite( STDOUT, $message . PHP_EOL ); // Write message to standard output.
+	fwrite( STDOUT, $message . PHP_EOL );
 }
 
 /**
@@ -238,7 +238,7 @@ function trailingslashit( $str ) {
 function process_junit_xml( $xml_string ) {
 	if ( empty( $xml_string ) ) {
 		return '';
-		return ''; // Return an empty string if the XML string is empty.
+		return '';
 	}
 
 	$xml        = simplexml_load_string( $xml_string );
@@ -255,7 +255,6 @@ function process_junit_xml( $xml_string ) {
 
 	$results['testsuites'] = array();
 
-	// XPath query to find test suites with failures or errors.
 	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( count( testcase ) > 0 ) and ( @errors > 0 or @failures > 0 ) ]' );
 	foreach ( $testsuites as $testsuite ) {
 		$result = array(
@@ -265,7 +264,6 @@ function process_junit_xml( $xml_string ) {
 			'errors'   => (string) $testsuite['errors'],
 		);
 
-		// Only include suites with failures or errors.
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue;
 		}
@@ -287,7 +285,7 @@ function process_junit_xml( $xml_string ) {
 		}
 	}
 
-	return json_encode( $results ); // Return the results as a JSON encoded string.
+	return json_encode( $results );
 }
 
 /**
@@ -364,7 +362,7 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 	$status_code = curl_getinfo( $process, CURLINFO_HTTP_CODE );
 	curl_close( $process );
 
-	return array( $status_code, $return ); // Return status code and response.
+	return array( $status_code, $return );
 }
 
 /**
@@ -478,15 +476,15 @@ function get_env_details() {
 		$imagick = new Imagick();
 		$version = $imagick->getVersion();
 		preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $matches );
-		$env['system_utils']['imagemagick'] = $matches[1]; // Get Imagick version.
+		$env['system_utils']['imagemagick'] = $matches[1];
 	} elseif ( class_exists( 'Gmagick' ) ) {
 		$gmagick = new Gmagick();
 		$version = $gmagick->getversion();
 		preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $matches );
-		$env['system_utils']['graphicsmagick'] = $matches[1]; // Get GraphicsMagick version.
+		$env['system_utils']['graphicsmagick'] = $matches[1];
 	}
 
-	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) ); // Get OpenSSL version.
+	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 
-	return $env; // Return the collected environment details.
+	return $env;
 }
