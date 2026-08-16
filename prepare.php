@@ -198,8 +198,8 @@ if ( class_exists( 'Imagick' ) ) {
 } elseif ( class_exists( 'Gmagick' ) ) {
 	\$gmagick = new Gmagick();
 	\$version = \$gmagick->getVersion();
-	preg_match('/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$matches);
-	\$env['system_utils']['graphicsmagick'] = \$matches[1] ?? 'Unknown';
+	preg_match('/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', \$version['versionString'], \$version);
+	\$env['system_utils']['graphicsmagick'] = \$version[1];
 }
 \$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 //\$mysqli = new mysqli( WPT_DB_HOST, WPT_DB_USER, WPT_DB_PASSWORD, WPT_DB_NAME );
