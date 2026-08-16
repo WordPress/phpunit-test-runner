@@ -38,10 +38,9 @@ $runner_vars = setup_runner_env_vars();
  *                   writing the key file.
  */
 // Set the SSH private key if it's provided in the environment.
-$WPT_SSH_PRIVATE_KEY_BASE64 = trim( getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' ) );
+$wpt_ssh_private_key_base64 = trim( getenv( 'WPT_SSH_PRIVATE_KEY_BASE64' ) );
 
-// Check if the private key variable is not empty.
-if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
+if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
 
 	// Log the action of securely extracting the private key.
 	log_message( 'Securely extracting WPT_SSH_PRIVATE_KEY_BASE64 into ~/.ssh/id_rsa' );
@@ -53,34 +52,29 @@ if ( ! empty( $WPT_SSH_PRIVATE_KEY_BASE64 ) ) {
 	}
 
 	// Write the decoded private key into the id_rsa file within the .ssh directory.
-	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $WPT_SSH_PRIVATE_KEY_BASE64 ) );
+	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $wpt_ssh_private_key_base64 ) );
 
 	// Define the array of operations to perform, depending on the SSH connection availability.
 	// When am SSH connection string is not provided, add a local operation to the array.
 	// When an SSH connection string is provided, add a remote operation to the array.
 	// Execute the operations defined in the operations array.
-	if( empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-		perform_operations( array(
-			'chmod 600 ~/.ssh/id_rsa',
-			'wp cli info'
-		) );
+	if ( empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+		perform_operations(
+			array(
+				'chmod 600 ~/.ssh/id_rsa',
+				'wp cli info',
+			)
+		);
 	} else {
-		perform_operations( array(
-			'chmod 600 ~/.ssh/id_rsa',
-			'ssh -q ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' wp cli info'
-		) );
+		perform_operations(
+			array(
+				'chmod 600 ~/.ssh/id_rsa',
+				'ssh -q ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' wp cli info',
+			)
+		);
 	}
-
 }
 
-/**
- * Don't validate the TLS certificate
- * Useful for local environments
- */
-$certificate_validation = '';
-if( ! $runner_vars['WPT_CERTIFICATE_VALIDATION'] ) {
-	$certificate_validation .= ' --no-check-certificate';
-}
 
 /*
  * Checkout and prepare wordpress-develop for testing.
@@ -91,19 +85,21 @@ if( ! $runner_vars['WPT_CERTIFICATE_VALIDATION'] ) {
  * - Install npm dependencies and run the build script.
  */
 // Prepare an array of shell commands to set up the testing environment.
-perform_operations( array(
+perform_operations(
+	array(
 
-	// Create the preparation directory if it doesn't exist. The '-p' flag creates intermediate directories as required.
-	'mkdir -p ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+		// Create the preparation directory if it doesn't exist. The '-p' flag creates intermediate directories as required.
+		'mkdir -p ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
-	// Clone the WordPress develop repository from GitHub into the preparation directory.
-	// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
-	'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+		// Clone the WordPress develop repository from GitHub into the preparation directory.
+		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
+		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
-	// Change directory to the preparation directory, install npm dependencies, and build the project.
-	'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build'
+		// Change directory to the preparation directory, install npm dependencies, and build the project.
+		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build',
 
-) );
+	)
+);
 
 // Log a message indicating the start of the variable replacement process for configuration.
 log_message( 'Replacing variables in wp-tests-config.php' );
@@ -224,7 +220,7 @@ $logger_replace_string = '// ** Database settings ** //' . PHP_EOL;
 $system_logger = $logger_replace_string . $system_logger;
 
 // Define a string that will set the 'WP_PHP_BINARY' constant to the path of the PHP executable.
-$php_binary_string = 'define( \'WP_PHP_BINARY\', \''. $runner_vars['WPT_PHP_EXECUTABLE'] . '\' );';
+$php_binary_string = 'define( \'WP_PHP_BINARY\', \'' . $runner_vars['WPT_PHP_EXECUTABLE'] . '\' );';
 
 /*
  * Map configuration file placeholders to environment-specific values.
@@ -232,8 +228,9 @@ $php_binary_string = 'define( \'WP_PHP_BINARY\', \''. $runner_vars['WPT_PHP_EXEC
  * This is used in the subsequent str_replace operation to replace placeholder
  * values in the wp-tests-config-sample.php file with the ones provided.
  */
-$search_replace = array(
-	'wptests_'                              => trim( getenv( 'WPT_TABLE_PREFIX' ) ) ? : 'wptests_',
+$wpt_table_prefix = trim( getenv( 'WPT_TABLE_PREFIX' ) );
+$search_replace   = array(
+	'wptests_'                              => '' !== $wpt_table_prefix ? $wpt_table_prefix : 'wptests_',
 	'youremptytestdbnamehere'               => trim( getenv( 'WPT_DB_NAME' ) ),
 	'yourusernamehere'                      => trim( getenv( 'WPT_DB_USER' ) ),
 	'yourpasswordhere'                      => trim( getenv( 'WPT_DB_PASSWORD' ) ),
@@ -255,7 +252,8 @@ file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $co
 $php_version_cmd = $runner_vars['WPT_PHP_EXECUTABLE'] . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
 
 /**
- * This command will differ when running on a remote server via SSH.
+ * If an SSH connection string is provided, the command to determine the PHP version is modified
+ * to execute remotely over SSH. This is required if the test environment is not the local machine.
  */
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	// The PHP version check command is prefixed with the SSH command, including SSH options,
@@ -276,8 +274,7 @@ $retval = 0;
 $env_php_version = exec( $php_version_cmd, $output, $retval );
 
 // Check if the command execution was successful by inspecting the return value.
-if ( $retval !== 0 ) {
-	// If the return value is not zero, an error occurred, and a message is logged.
+if ( 0 !== $retval ) {
 	error_message( 'Could not retrieve the environment PHP Version.' );
 }
 
@@ -296,11 +293,11 @@ if ( version_compare( $env_php_version, '7.2', '<' ) ) {
 
 
 // Check if Composer is installed and available in the PATH.
-$composer_cmd = 'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . ' && ';
-$retval = 0;
+$composer_cmd  = 'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . ' && ';
+$retval        = 0;
 $composer_path = escapeshellarg( system( 'which composer', $retval ) );
 
-if ( $retval === 0 ) {
+if ( 0 === $retval ) {
 
 	// If Composer is available, prepare the command to use the Composer binary.
 	$composer_cmd .= $composer_path . ' ';
@@ -310,19 +307,23 @@ if ( $retval === 0 ) {
 	// If Composer is not available, download the Composer phar file.
 	log_message( 'Local Composer not found. Downloading latest stable ...' );
 
-	perform_operations( array(
-		'wget -O ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/composer.phar' ) . ' https://getcomposer.org/composer-stable.phar',
-	) );
+	perform_operations(
+		array(
+			'wget -O ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/composer.phar' ) . ' https://getcomposer.org/composer-stable.phar',
+		)
+	);
 
 	// Update the command to use the downloaded Composer phar file.
-	$composer_cmd .= 'php composer.phar ';
+	$composer_cmd .= $runner_vars['WPT_PHP_EXECUTABLE'] . ' composer.phar ';
 }
 
 // Set the PHP version for Composer to ensure compatibility and update dependencies.
-perform_operations( array(
-	$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
-	$composer_cmd . 'update',
-) );
+perform_operations(
+	array(
+		$composer_cmd . 'config platform.php ' . escapeshellarg( $env_php_version ),
+		$composer_cmd . 'update',
+	)
+);
 
 /*
  * Transfer the built WordPress codebase to the remote test environment.
@@ -343,11 +344,25 @@ if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	}
 
 	// Perform the rsync operation with the configured options and exclude patterns.
-	// This operation synchronizes the test environment with the prepared files, excluding version control directories
-	// and other non-essential files for test execution.
-	perform_operations( array(
-		'rsync ' . $rsync_options . ' --exclude=".git/" --exclude="node_modules/" --exclude="composer.phar" -e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" ' . escapeshellarg( trailingslashit( $runner_vars['WPT_PREPARE_DIR'] )  ) . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $runner_vars['WPT_TEST_DIR'] ),
-	) );
+	// This operation synchronizes the test environment with the prepared files, excluding
+	// version control directories and other non-essential files for test execution.
+	perform_operations(
+		array(
+			'rsync ' . $rsync_options
+				. ' --exclude=".git/"'
+				. ' --exclude="node_modules/"'
+				. ' --exclude="composer.phar"'
+				. ' --exclude=".cache/"'
+				. ' --exclude=".devcontainer/"'
+				. ' --exclude=".github/"'
+				. ' --exclude="tools/"'
+				// Exclude all subdirectories in tests/ except phpunit/.
+				. ' --exclude="tests/*" --include="tests/phpunit/**"'
+				. ' -e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" '
+				. escapeshellarg( trailingslashit( $runner_vars['WPT_PREPARE_DIR'] ) )
+				. ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $runner_vars['WPT_TEST_DIR'] ),
+		)
+	);
 }
 
 // Log a success message indicating that the environment has been prepared.

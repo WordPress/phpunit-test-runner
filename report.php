@@ -36,22 +36,33 @@ $runner_vars = setup_runner_env_vars();
  * The SVN revision number is extracted from the retrieves the latest commit
  * message using a combination of grep and cut commands.
  */
-log_message('Getting SVN Revision');
-$rev = exec('git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2');
+log_message( 'Getting SVN Revision' );
+$rev = exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | grep "git-svn-id:" | cut -d " " -f 2 | cut -d "@" -f 2' );
 
 /*
  * Retrieve the SVN commit message from the repository's Git log.
  *
  * The `git log` command is used to fetch the commit message being tested.
  */
-log_message('Getting SVN message');
-$message = trim( exec('git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | head -1') );
+log_message( 'Getting SVN message' );
+$message = trim( exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | head -1' ) );
 
-// Construct the file path for copying the junit.xml results.
-log_message('Copying junit.xml results');
+/**
+ * Prepares the file path for copying the junit.xml results.
+ * Logs a message indicating the start of the operation to copy junit.xml results.
+ * Constructs the file path to the junit.xml file(s) located in the test directory,
+ * making use of the WPT_TEST_DIR environment variable. The path is sanitized to be
+ * safely used in shell commands.
+ */
+log_message( 'Copying junit.xml results' );
 $junit_location = escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . '/tests/phpunit/build/logs/*';
-
-// Modify the junit.xml file path when an SSH connection is configured.
+/**
+ * Modifies the junit.xml results file path for a remote location if an SSH connection is available.
+ * If the WPT_SSH_CONNECT environment variable is not empty, indicating that an SSH connection
+ * is configured, this snippet adapts the junit_location variable to include the necessary SSH
+ * command and options for accessing the remote file system. It concatenates SSH options with the
+ * remote path to ensure that the junit.xml results can be accessed or copied over SSH.
+ */
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
 	$junit_location = '-e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $junit_location );
 }
@@ -65,14 +76,15 @@ if ( $runner_vars['WPT_DEBUG'] ) {
 
 // Copy the junit.xml file from the test directory to the prepare directory.
 $junit_exec = 'rsync ' . $rsync_options . ' ' . $junit_location . ' ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] );
-
-perform_operations( array(
-	$junit_exec,
-) );
+perform_operations(
+	array(
+		$junit_exec,
+	)
+);
 
 // Process the junit.xml file.
 log_message( 'Processing and uploading junit.xml' );
-$xml = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/junit.xml' );
+$xml     = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/junit.xml' );
 $results = process_junit_xml( $xml );
 
 /*
@@ -97,34 +109,33 @@ if ( file_exists( $runner_vars['WPT_PREPARE_DIR'] . '/env.json' ) ) {
  *
  * Otherwise, the test results will be logged locally.
  */
-if( ! empty( $runner_vars['WPT_REPORT_API_KEY'] ) ) {
+if ( ! empty( $runner_vars['WPT_REPORT_API_KEY'] ) ) {
 
 	// Upload the results and capture the HTTP status and response body
 	list( $http_status, $response_body ) = upload_results( $results, $rev, $message, $env, $runner_vars['WPT_REPORT_API_KEY'] );
 
 	// Decode the JSON response body
 	$response = json_decode( $response_body, true );
-	if ( 20 == substr( $http_status, 0, 2 ) ) {
+	if ( 20 == substr( $http_status, 0, 2 ) ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual
 
 		// Construct and log a success message with a link if provided in the response
-		$message = 'Results successfully uploaded';
+		$message  = 'Results successfully uploaded';
 		$message .= isset( $response['link'] ) ? ': ' . $response['link'] : '';
 		log_message( $message );
 
 	} else {
 
 		// Construct and log an error message with additional details if provided in the response
-		$message = 'Error uploading results';
+		$message  = 'Error uploading results';
 		$message .= isset( $response['message'] ) ? ': ' . $response['message'] : '';
 		$message .= ' (HTTP status ' . (int) $http_status . ')';
 		error_message( $message );
 
 	}
-
 } else {
 
 	// Log the test results and environment details locally if no API key is provided
-	log_message( '[+] TEST RESULTS' . "\n\n" . $results. "\n\n" );
+	log_message( '[+] TEST RESULTS' . "\n\n" . $results . "\n\n" );
 	log_message( '[+] ENVIRONMENT' . "\n\n" . $env . "\n\n" );
 
 }

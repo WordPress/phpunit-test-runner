@@ -39,11 +39,13 @@ $runner_vars = setup_runner_env_vars();
  * - Forcefully remove the `node_modules/.cache` directory.
  * - Remove the entire preparation directory.
  */
-perform_operations( array(
-	'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
-	'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
-	'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
-) );
+perform_operations(
+	array(
+		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
+		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
+		'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+	)
+);
 
 /*
  * Clean up the test directory on a remote server.
@@ -52,7 +54,9 @@ perform_operations( array(
  * runner is executed.
  */
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	perform_operations( array(
-		'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
-	) );
+	perform_operations(
+		array(
+			'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $runner_vars['WPT_RM_TEST_DIR_CMD'] ),
+		)
+	);
 }
