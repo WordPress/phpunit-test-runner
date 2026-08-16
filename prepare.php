@@ -55,7 +55,7 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
 	file_put_contents( getenv( 'HOME' ) . '/.ssh/id_rsa', base64_decode( $wpt_ssh_private_key_base64 ) );
 
 	// Define the array of operations to perform, depending on the SSH connection availability.
-	// When am SSH connection string is not provided, add a local operation to the array.
+	// When an SSH connection string is not provided, add a local operation to the array.
 	// When an SSH connection string is provided, add a remote operation to the array.
 	// Execute the operations defined in the operations array.
 	if ( empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
@@ -329,7 +329,7 @@ perform_operations(
  * Transfer the built WordPress codebase to the remote test environment.
  *
  * When an SSH connection is configured, rsync is used to copy the files
- * required tp rim the WordPress PHPUnit test suite.
+ * required to run the WordPress PHPUnit test suite.
  *
  * The -r option for rsync enables recursive copying to handle nested directory
  * structures.
