@@ -28,6 +28,16 @@ check_required_env();
 $runner_vars = setup_runner_env_vars();
 
 /*
+ * Drop the test tables from the database.
+ *
+ * This must happen before the directories are removed, because the database
+ * credentials are read from the wp-tests-config.php file inside the test
+ * directory. A failure here is a warning, not a fatal error, so the
+ * directory cleanup below always runs.
+ */
+cleanup_database( $runner_vars );
+
+/*
  * Clean up the test preparation directory.
  *
  * This ensures a clean slate the next time the test runner is executed.

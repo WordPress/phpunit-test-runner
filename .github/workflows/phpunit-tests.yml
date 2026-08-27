@@ -88,3 +88,14 @@ jobs:
 
       - name: Cleanup
         run: php cleanup.php
+
+      - name: Verify database cleanup
+        env:
+          MYSQL_PWD: wp_test
+        run: |
+          TABLES=$(mysql -h 127.0.0.1 -u wp_test wordpress_test -N -e "SHOW TABLES LIKE 'wptests\_%'")
+          if [ -n "$TABLES" ]; then
+            echo "Test tables remain after cleanup:"
+            echo "$TABLES"
+            exit 1
+          fi

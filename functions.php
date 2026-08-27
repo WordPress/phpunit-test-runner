@@ -488,3 +488,46 @@ function get_env_details() {
 
 	return $env;
 }
+
+/**
+ * Drops the WordPress test tables so the next run starts clean.
+ *
+ * Stale rows survive the test suite's own install step, because WordPress
+ * boots before the tables are dropped and writes data it loaded into memory,
+ * such as user roles, back into the fresh tables. See issue #110.
+ *
+ * The tables live in the test environment, so when an SSH connection is
+ * configured the cleanup-db.php script is piped to the remote PHP binary on
+ * stdin. The script reads the database credentials from wp-tests-config.php
+ * in the test directory, so no password appears on any command line.
+ *
+ * A failure is reported as a warning rather than stopping execution, so the
+ * directory cleanup in cleanup.php always runs. Set the WPT_SKIP_DB_CLEANUP
+ * environment variable to skip this step entirely.
+ *
+ * @param array $runner_vars Test runner configuration options.
+ *
+ * @uses log_message() to log the executed command and any warning.
+ */
+function cleanup_database( $runner_vars ) {
+	if ( (bool) getenv( 'WPT_SKIP_DB_CLEANUP' ) ) {
+		log_message( 'WPT_SKIP_DB_CLEANUP is set, skipping database cleanup.' );
+		return;
+	}
+
+	$script = __DIR__ . '/cleanup-db.php';
+
+	if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+		$remote_command = $runner_vars['WPT_PHP_EXECUTABLE'] . ' -- ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] );
+		$command        = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $remote_command ) . ' < ' . escapeshellarg( $script );
+	} else {
+		$command = $runner_vars['WPT_PHP_EXECUTABLE'] . ' ' . escapeshellarg( $script ) . ' ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] );
+	}
+
+	log_message( $command );
+	passthru( $command, $return_code );
+
+	if ( 0 !== $return_code ) {
+		log_message( 'Warning: database cleanup did not complete, continuing with directory cleanup.' );
+	}
+}
