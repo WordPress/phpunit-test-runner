@@ -84,7 +84,14 @@ perform_operations(
 
 // Process the junit.xml file.
 log_message( 'Processing and uploading junit.xml' );
-$xml     = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/junit.xml' );
+$junit_path = $runner_vars['WPT_PREPARE_DIR'] . '/junit.xml';
+if ( ! file_exists( $junit_path ) ) {
+	error_message( 'junit.xml was not found at ' . $junit_path . ', so there are no test results to report. Aborting instead of reporting an empty result as a success. See https://github.com/WordPress/phpunit-test-runner/issues/311.' );
+}
+if ( ! is_readable( $junit_path ) ) {
+	error_message( 'junit.xml exists at ' . $junit_path . ' but is not readable. Fix the file permissions and run the report again. See https://github.com/WordPress/phpunit-test-runner/issues/311.' );
+}
+$xml     = file_get_contents( $junit_path );
 $results = process_junit_xml( $xml );
 
 /*
