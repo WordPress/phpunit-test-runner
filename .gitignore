@@ -4,6 +4,7 @@ vendor/
 .cache/
 package-lock.json
 commit.json
+commits.json
 ignore.json
 
 # Exclude the default test directory.
