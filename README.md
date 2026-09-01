@@ -224,6 +224,10 @@ export WPT_PHPUNIT_CMD=""
 # Use if `rm -r` can't be called directly for some reason.
 export WPT_RM_TEST_DIR_CMD=""
 
+# (Optionally) skip dropping the test tables from the database during cleanup.
+# Use if you manage the database yourself and want to keep the tables.
+export WPT_SKIP_DB_CLEANUP=""
+
 # SSH connection string (can also be an alias).
 # Leave empty if tests are meant to run in the same environment.
 export WPT_SSH_CONNECT=""
@@ -543,6 +547,8 @@ Having the tests working, all that remains is to delete all the files that have 
 ```bash
 php cleanup.php
 ```
+
+This also drops the test tables from the database, reading the credentials from the `wp-tests-config.php` file in the test directory. Without this step, data from a previous run can survive into the next one, because the test suite loads some of it (such as user roles) into memory before it recreates the tables. Set the `WPT_SKIP_DB_CLEANUP` environment variable if you manage the database yourself and want to keep the tables.
 
 ## Automatic running
 
