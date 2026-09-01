@@ -37,13 +37,13 @@ $runner_vars = setup_runner_env_vars();
  * The following actions are performed:
  * - Forcefully deletes only the .git directory and the node_modules cache.
  * - Forcefully remove the `node_modules/.cache` directory.
- * - Remove the entire preparation directory.
+ * - Forcefully remove the entire preparation directory.
  */
 perform_operations(
 	array(
 		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
 		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
-		'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 	)
 );
 

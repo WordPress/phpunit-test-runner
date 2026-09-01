@@ -87,7 +87,7 @@ function setup_runner_env_vars() {
 			'WPT_SSH_CONNECT'     => trim( getenv( 'WPT_SSH_CONNECT' ) ),
 			'WPT_SSH_OPTIONS'     => '' !== $ssh_options ? $ssh_options : '-o StrictHostKeyChecking=no',
 			'WPT_PHP_EXECUTABLE'  => '' !== $php_exec ? $php_exec : 'php',
-			'WPT_RM_TEST_DIR_CMD' => '' !== $rm_test_dir ? $rm_test_dir : 'rm -r ' . $runner_configuration['WPT_TEST_DIR'],
+			'WPT_RM_TEST_DIR_CMD' => '' !== $rm_test_dir ? $rm_test_dir : 'rm -rf ' . escapeshellarg( $runner_configuration['WPT_TEST_DIR'] ),
 			'WPT_REPORT_API_KEY'  => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
 			'WPT_DEBUG'           => (bool) getenv( 'WPT_DEBUG' ),
 		)
