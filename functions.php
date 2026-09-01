@@ -366,7 +366,176 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 }
 
 /**
- Collects details about the testing environment.
+ * Parse a WordPress-style database host into mysqli connection pieces.
+ *
+ * @param string $host Database host string.
+ *
+ * @return array|false Parsed connection pieces, or false on invalid input.
+ */
+function wpt_runner_parse_db_host( $host ) {
+	$host = (string) $host;
+	$socket = null;
+	$port = null;
+	$is_ipv6 = false;
+
+	if ( '' === $host ) {
+		return false;
+	}
+
+	$socket_pos = strpos( $host, ':/' );
+	if ( false !== $socket_pos ) {
+		$socket = substr( $host, $socket_pos + 1 );
+		$host = substr( $host, 0, $socket_pos );
+	}
+
+	if ( substr_count( $host, ':' ) > 1 ) {
+		if ( 1 !== preg_match( '/^(?:\[(?P<host>[0-9a-fA-F:.]+)\](?::(?P<port>[0-9]+))?|(?P<host_unbracketed>[0-9a-fA-F:.]+))$/', $host, $matches ) ) {
+			return false;
+		}
+		$parsed_host = ! empty( $matches['host'] ) ? $matches['host'] : ( isset( $matches['host_unbracketed'] ) ? $matches['host_unbracketed'] : '' );
+		$is_ipv6 = true;
+	} else {
+		if ( 1 !== preg_match( '/^(?P<host>[^:]*)(?::(?P<port>[0-9]+))?$/', $host, $matches ) ) {
+			return false;
+		}
+		$parsed_host = $matches['host'];
+	}
+
+	if ( '' === $parsed_host ) {
+		return false;
+	}
+
+	if ( isset( $matches['port'] ) && '' !== $matches['port'] ) {
+		$port = (int) $matches['port'];
+	}
+
+	return array(
+		'host'    => $parsed_host,
+		'port'    => $port,
+		'socket'  => $socket,
+		'is_ipv6' => $is_ipv6,
+	);
+}
+
+// The report.php fallback runs without WordPress bootstrap, so $wpdb is unavailable.
+// phpcs:disable WordPress.DB.RestrictedFunctions -- Direct mysqli is limited to database version reporting.
+/**
+ * Gets the database server version, if it can be detected safely.
+ *
+ * @param string $db_host     Database host.
+ * @param string $db_user     Database user.
+ * @param string $db_password Database password.
+ * @param string $db_name     Database name.
+ *
+ * @return string Raw server version string, or an empty string.
+ */
+function wpt_runner_get_db_server_version( $db_host, $db_user, $db_password, $db_name ) {
+	$db_host = trim( (string) $db_host );
+	$db_user = trim( (string) $db_user );
+	$db_password = (string) $db_password;
+	$db_name = trim( (string) $db_name );
+
+	if ( '' === $db_host ) {
+		$db_host = 'localhost';
+	}
+
+	if ( '' === $db_user || '' === $db_name ) {
+		return '';
+	}
+
+	if ( ! class_exists( 'mysqli' ) ) {
+		return '';
+	}
+
+	$required_functions = array(
+		'mysqli_close',
+		'mysqli_fetch_row',
+		'mysqli_free_result',
+		'mysqli_init',
+		'mysqli_options',
+		'mysqli_query',
+		'mysqli_real_connect',
+	);
+
+	foreach ( $required_functions as $function_name ) {
+		if ( ! function_exists( $function_name ) ) {
+			return '';
+		}
+	}
+
+	$parsed_host = wpt_runner_parse_db_host( $db_host );
+	if ( false === $parsed_host ) {
+		return '';
+	}
+	$connect_host = $parsed_host['host'];
+	// mysqlnd expects IPv6 hosts in brackets, matching WordPress core's connection handling.
+	if ( $parsed_host['is_ipv6'] && extension_loaded( 'mysqlnd' ) ) {
+		$connect_host = '[' . $connect_host . ']';
+	}
+
+	$mysqli = null;
+	$mysqli_report_mode = null;
+
+	try {
+		if ( class_exists( 'mysqli_driver' ) ) {
+			$mysqli_driver = new mysqli_driver();
+			$mysqli_report_mode = $mysqli_driver->report_mode;
+		}
+
+		if ( function_exists( 'mysqli_report' ) ) {
+			mysqli_report( MYSQLI_REPORT_OFF );
+		}
+
+		$mysqli = mysqli_init();
+		if ( false === $mysqli ) {
+			return '';
+		}
+
+		if ( defined( 'MYSQLI_OPT_CONNECT_TIMEOUT' ) ) {
+			mysqli_options( $mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 5 );
+		}
+
+		if ( ! @mysqli_real_connect(
+			$mysqli,
+			$connect_host,
+			$db_user,
+			$db_password,
+			$db_name,
+			$parsed_host['port'],
+			$parsed_host['socket']
+		) ) {
+			return '';
+		}
+
+		$result = @mysqli_query( $mysqli, 'SELECT VERSION()' );
+		if ( ! is_object( $result ) ) {
+			return '';
+		}
+
+		$row = mysqli_fetch_row( $result );
+		mysqli_free_result( $result );
+
+		if ( ! is_array( $row ) || ! isset( $row[0] ) || '' === (string) $row[0] ) {
+			return '';
+		}
+
+		return (string) $row[0];
+	} catch ( Throwable $e ) {
+		return '';
+	} finally {
+		if ( $mysqli instanceof mysqli ) {
+			@mysqli_close( $mysqli );
+		}
+		if ( null !== $mysqli_report_mode && function_exists( 'mysqli_report' ) ) {
+			mysqli_report( $mysqli_report_mode );
+		}
+	}
+}
+
+// phpcs:enable WordPress.DB.RestrictedFunctions
+
+/**
+ * Collects details about the testing environment.
  *
  * The versions of PHP, PHP modules, database software, and system utilities
  * can impact the results of the test suite. This gathers the relevant details
@@ -378,14 +547,14 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
  *               - 'php_modules': An associative array of selected PHP modules and their versions.
  *               - 'system_utils': Versions of certain system utilities such as 'curl', 'imagemagick',
  *                 'graphicsmagick', and 'openssl'.
- *               - 'mysql_version': The version of MySQL installed.
+ *               - 'mysql_version': The version of the database server.
  *               - 'os_name': The name of the operating system.
  *               - 'os_version': The version of the operating system.
  *
  * @uses phpversion() to get the PHP version and module versions.
  *
- * @uses shell_exec() to execute system commands for retrieving MySQL version,
- *                    OS details, and versions of utilities like curl and OpenSSL.
+ * @uses shell_exec() to execute system commands for retrieving OS details
+ *                    and versions of utilities like curl and OpenSSL.
  *
  * @uses class_exists() to check for the availability of the Imagick and Gmagick
  *                      classes for version detection.
@@ -401,15 +570,26 @@ function get_env_details() {
 		$imagick_info = Imagick::queryFormats();
 	}
 
+	$wpt_db_host = trim( getenv( 'WPT_DB_HOST' ) );
+	if ( ! $wpt_db_host ) {
+		$wpt_db_host = 'localhost';
+	}
+	$wpt_db_user     = trim( getenv( 'WPT_DB_USER' ) );
+	$wpt_db_password = getenv( 'WPT_DB_PASSWORD' );
+	if ( false === $wpt_db_password ) {
+		$wpt_db_password = '';
+	}
+	$wpt_db_name = trim( getenv( 'WPT_DB_NAME' ) );
+
 	$env = array(
-		'php_version'   => phpversion(),
-		'php_modules'   => array(),
-		'gd_info'       => $gd_info,
-		'imagick_info'  => $imagick_info,
-		'mysql_version' => trim( shell_exec( 'mysql --version' ) ),
-		'system_utils'  => array(),
-		'os_name'       => trim( shell_exec( 'uname -s' ) ),
-		'os_version'    => trim( shell_exec( 'uname -r' ) ),
+		'php_version'    => phpversion(),
+		'php_modules'    => array(),
+		'gd_info'        => $gd_info,
+		'imagick_info'   => $imagick_info,
+		'mysql_version'  => wpt_runner_get_db_server_version( $wpt_db_host, $wpt_db_user, $wpt_db_password, $wpt_db_name ),
+		'system_utils'   => array(),
+		'os_name'        => trim( shell_exec( 'uname -s' ) ),
+		'os_version'     => trim( shell_exec( 'uname -r' ) ),
 	);
 	unset( $gd_info, $imagick_info );
 
@@ -459,18 +639,6 @@ function get_env_details() {
 	}
 	$curl_bits                   = curl_version();
 	$env['system_utils']['curl'] = implode( ' ', array_values( array_filter( $curl_bits, 'curl_selected_bits', ARRAY_FILTER_USE_KEY ) ) );
-
-	$wpt_db_host = trim( getenv( 'WPT_DB_HOST' ) );
-	if ( ! $wpt_db_host ) {
-		$wpt_db_host = 'localhost';
-	}
-	$wpt_db_user     = trim( getenv( 'WPT_DB_USER' ) );
-	$wpt_db_password = trim( getenv( 'WPT_DB_PASSWORD' ) );
-	$wpt_db_name     = trim( getenv( 'WPT_DB_NAME' ) );
-
-	//$mysqli = new mysqli( $wpt_db_host, $wpt_db_user, $wpt_db_password, $wpt_db_name );
-	//$env['mysql_version'] = $mysqli->query("SELECT VERSION()")->fetch_row()[0];
-	//$mysqli->close();
 
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
