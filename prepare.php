@@ -84,6 +84,11 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
  * - Clones the WordPress/wordpress-develop repository from GitHub.
  * - Install npm dependencies and run the build script.
  */
+// When debug mode is enabled, run npm at its most verbose logging level, so a
+// hung or slow npm command shows what it is doing instead of sitting silent.
+// The same debug mode adds verbosity to the rsync operations further down.
+$npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
+
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations(
 	array(
@@ -96,7 +101,7 @@ perform_operations(
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
 		// Change directory to the preparation directory, install npm dependencies, and build the project.
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build',
+		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build' . $npm_verbosity,
 
 	)
 );
