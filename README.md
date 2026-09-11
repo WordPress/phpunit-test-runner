@@ -62,6 +62,8 @@ export WPT_TEST_DIR=wp-test-runner-$TRAVIS_BUILD_NUMBER
 export WPT_TABLE_PREFIX=wptests_$TRAVIS_BUILD_NUMBER\_
 ```
 
+The test suite's temporary files are kept in a `wp-temp` directory inside the test directory, so runs with their own `WPT_TEST_DIR` do not share the system temp directory.
+
 Connect to a remote environment over SSH by having the CI job provision the SSH key:
 
 ```bash
@@ -272,7 +274,7 @@ export WPT_PREPARE_DIR="/tmp/wp-test-runner"
 
 **Test directory**
 
-Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally.
+Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally. The test suite's temporary files are kept in a `wp-temp` directory inside this path.
 
 
 ```
