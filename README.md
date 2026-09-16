@@ -221,7 +221,8 @@ export WPT_PHP_EXECUTABLE=${WPT_PHP_EXECUTABLE-php}
 export WPT_PHPUNIT_CMD=""
 
 # (Optionally) define the command execution to remove the test directory
-# Use if `rm -r` can't be called directly for some reason.
+# Use if `rm -rf` can't be called directly for some reason. Include the `-f`
+# flag, or removal stops to ask about write-protected files such as git objects.
 export WPT_RM_TEST_DIR_CMD=""
 
 # SSH connection string (can also be an alias).
@@ -358,7 +359,7 @@ export WPT_PHPUNIT_CMD=""
 
 **Remove directory command**
 
-(Optionally) define the command execution to remove the test directory. Use if `rm -r` can't be called directly for some reason.
+(Optionally) define the command execution to remove the test directory. Use if `rm -rf` can't be called directly for some reason. Include the `-f` flag, or removal stops to ask about write-protected files such as git objects, and cleanup waits for input that never arrives.
 
 ```
 export WPT_RM_TEST_DIR_CMD=""
