@@ -400,6 +400,34 @@ $search_replace   = array(
 // Replace the placeholders in the wp-tests-config-sample.php file content with actual values.
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
 
+/*
+ * Point the test suite's temporary directory inside the test directory, so
+ * concurrent runs with their own WPT_TEST_DIR do not share the system temp
+ * directory. Core's get_temp_dir() checks the WP_TEMP_DIR constant first,
+ * and several tests write fixed file names into that directory, so two runs
+ * sharing it can delete or overwrite each other's files mid test.
+ *
+ * The path is anchored to the config file's own location, so it stays
+ * correct after the config is copied to a remote test environment, and the
+ * directory is removed together with the test directory during cleanup.
+ */
+$contents .= <<<'WPT_TEMP_DIR_CONFIG'
+
+if ( ! defined( 'WP_TEMP_DIR' ) ) {
+	define( 'WP_TEMP_DIR', __DIR__ . '/wp-temp/' );
+}
+
+if ( ! is_dir( WP_TEMP_DIR ) ) {
+	mkdir( WP_TEMP_DIR, 0777, true );
+}
+
+if ( ! is_dir( WP_TEMP_DIR ) || ! is_writable( WP_TEMP_DIR ) ) {
+	echo 'The temporary directory ' . WP_TEMP_DIR . ' could not be created or is not writable. Fix the permissions on the test directory and run again.' . PHP_EOL;
+	exit( 1 );
+}
+
+WPT_TEMP_DIR_CONFIG;
+
 // Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
 file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $contents );
 
