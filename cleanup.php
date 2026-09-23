@@ -28,6 +28,16 @@ check_required_env();
 $runner_vars = setup_runner_env_vars();
 
 /*
+ * Drop the test tables from the database.
+ *
+ * This must happen before the directories are removed, because the database
+ * credentials are read from the wp-tests-config.php file inside the test
+ * directory. A failure here is a warning, not a fatal error, so the
+ * directory cleanup below always runs.
+ */
+cleanup_database( $runner_vars );
+
+/*
  * Clean up the test preparation directory.
  *
  * This ensures a clean slate the next time the test runner is executed.
@@ -37,13 +47,13 @@ $runner_vars = setup_runner_env_vars();
  * The following actions are performed:
  * - Forcefully deletes only the .git directory and the node_modules cache.
  * - Forcefully remove the `node_modules/.cache` directory.
- * - Remove the entire preparation directory.
+ * - Forcefully remove the entire preparation directory.
  */
 perform_operations(
 	array(
 		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/.git' ),
 		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] . '/node_modules/.cache' ),
-		'rm -r ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+		'rm -rf ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 	)
 );
 
