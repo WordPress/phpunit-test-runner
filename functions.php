@@ -1,16 +1,18 @@
 <?php
 /**
- * Validates the presence of essential environment variables necessary for the application to run correctly.
- * Specifically checks for variables related to directories and database configuration. It also ensures that
- * the test and preparation directories are the same when running locally without SSH connection requirements.
+ * Confirms the presence of required environment variables.
  *
- * This function will issue error messages through `error_message()` for any missing environment variables
- * and logs a message upon successful validation of all required variables.
+ * For the test runner to function correctly, a few requirements must be met:
+ * - A database configuration must be provided using the documented environment
+ *   variables.
+ * - The preparation and test directories must be the same when running
+ *   locally (not making use of an SSH connection).
  *
- * @param bool $check_db Optional. Whether to include database-related environment variables in the check. Defaults to true.
- *                       If set to false, database variables (prefixed with 'WPT_DB_') are not checked.
+ * @param bool $check_db Optional. Whether to confirm `WPT_DB_*` environment
+ *                       variables are present. Default true.
  *
- * @return void This function does not return a value but will halt execution if any required environment variable is missing.
+ * @return void This function does not return a value but will halt execution
+ *              if any required environment variable is missing.
  *
  * @uses getenv() to retrieve environment variable values.
  * @uses error_message() to display error messages for missing variables.
@@ -26,12 +28,12 @@ function check_required_env( $check_db = true ) {
 		'WPT_DB_PASSWORD',
 		'WPT_DB_HOST',
 	);
-	foreach( $required as $var ) {
+	foreach ( $required as $var ) {
 		if ( ! $check_db && 0 === strpos( $var, 'WPT_DB_' ) ) {
 			continue;
 		}
 		if ( false === getenv( $var ) ) {
-			error_message( $var . ' must be set as an environment variable. Did you remember to execute \'source .env\' to load the environment variables?' );
+			error_message( $var . ' must be set as an environment variable.' );
 		}
 	}
 
@@ -44,67 +46,134 @@ function check_required_env( $check_db = true ) {
 }
 
 /**
- * Executes a series of shell commands provided in the operations array. Each operation is logged before execution.
- * If any command fails (indicated by a non-zero return code), an error message is displayed. This function is
- * useful for automating batch shell tasks within a PHP script, with error handling for each operation.
+ * Parses environment variables used to configure the test runner.
  *
- * @param array $operations An array of shell commands (strings) to be executed. Each command should be
- *                          a valid shell command and properly escaped for safety. The commands are executed
- *                          in the order they appear in the array.
+ * @return array[] {
+ *      Test runner configuration options.
  *
- * @return void This function does not return a value. However, it will output the result of each shell command
- *              to the standard output and log the execution. It will also halt on the first command that fails,
- *              displaying an error message.
+ *      @type array ...$0 {
+ *          An associative array of test runner configuration options.
  *
- * @uses log_message() to log each operation before execution. This can be used for debugging or auditing purposes.
- * @uses passthru() to execute the shell command, which provides direct output to the browser. Be aware that using
- *      this function with untrusted input can lead to security vulnerabilities, such as command injection attacks.
- * @uses error_message() to display an error message if a shell command fails. The execution stops at the first failure.
+ *          @type string $WPT_TEST_DIR               Path to the directory where wordpress-develop is placed for testing
+ *                                                   after being prepared. Default '/tmp/wp-test-runner'.
+ *          @type string $WPT_PREPARE_DIR            Path to the temporary directory where wordpress-develop is cloned
+ *                                                   and configured. Default '/tmp/wp-test-runner'.
+ *          @type string $WPT_SSH_CONNECT            List of inner blocks. An array of arrays that
+ *                                                   have the same structure as this one.
+ *          @type string $WPT_SSH_OPTIONS            HTML from inside block comment delimiters.
+ *          @type string $WPT_PHP_EXECUTABLE         List of string fragments and null markers where
+ *                                                   inner blocks were found.
+ *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
+ *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
+ *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled.
+ *      }
+ *  }
+ */
+function setup_runner_env_vars() {
+	$test_dir    = trim( getenv( 'WPT_TEST_DIR' ) );
+	$prepare_dir = trim( getenv( 'WPT_PREPARE_DIR' ) );
+	$ssh_options = trim( getenv( 'WPT_SSH_OPTIONS' ) );
+	$php_exec    = trim( getenv( 'WPT_PHP_EXECUTABLE' ) );
+	$rm_test_dir = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) );
+
+	$runner_configuration = array(
+		'WPT_TEST_DIR' => '' !== $test_dir ? $test_dir : '/tmp/wp-test-runner',
+	);
+
+	return array_merge(
+		$runner_configuration,
+		array(
+			'WPT_PREPARE_DIR'     => '' !== $prepare_dir ? $prepare_dir : '/tmp/wp-test-runner',
+			'WPT_SSH_CONNECT'     => trim( getenv( 'WPT_SSH_CONNECT' ) ),
+			'WPT_SSH_OPTIONS'     => '' !== $ssh_options ? $ssh_options : '-o StrictHostKeyChecking=no',
+			'WPT_PHP_EXECUTABLE'  => '' !== $php_exec ? $php_exec : 'php',
+			'WPT_RM_TEST_DIR_CMD' => '' !== $rm_test_dir ? $rm_test_dir : 'rm -rf ' . escapeshellarg( $runner_configuration['WPT_TEST_DIR'] ),
+			'WPT_REPORT_API_KEY'  => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
+			'WPT_DEBUG'           => (bool) getenv( 'WPT_DEBUG' ),
+		)
+	);
+}
+
+/**
+ * Executes a set of shell commands.
+ *
+ * Each command is logged before being executed.
+ *
+ * When a non-zero return code is encountered, the error message is displayed
+ * and the runner will fail.
+ *
+ * @param array $operations A list of shell commands (strings) to execute.
+ * Each command should be a valid shell command and properly escaped for safety.
+ * The commands are executed in the order they appear in the array.
+ *
+ * @return void This function does not return a value. However, it will output
+ * the result of each shell command to the standard output and log the
+ * execution. It will also halt on the first command that fails, displaying an
+ * error message.
+ *
+ * @uses log_message() to log each operation before execution. This can be used
+ * for debugging or auditing purposes.
+ *
+ * @uses passthru() to execute the shell command, which provides direct output
+ * to the browser. Be aware that using this function with untrusted input can
+ * lead to security vulnerabilities, such as command injection attacks.
+ *
+ * @uses error_message() to display an error message if a shell command fails.
+ * The execution stops at the first failure.
  */
 function perform_operations( $operations ) {
-	foreach( $operations as $operation ) {
+	foreach ( $operations as $operation ) {
 		log_message( $operation );
 		passthru( $operation, $return_code );
+
+		// Check for command execution failure.
 		if ( 0 !== $return_code ) {
-			error_message( 'Failed to perform operation.' );
+			error_message( 'Failed to perform operation: ' . $operation . '.' );
+			return;
 		}
 	}
 }
 
 /**
- * Writes a message followed by a newline to the standard output (STDOUT). This function is commonly used for logging purposes,
- * providing feedback during script execution, or debugging. The message is appended with the PHP end-of-line constant (PHP_EOL)
- * to ensure proper line breaks on different operating systems.
+ * Writes a message to the standard output (STDOUT).
  *
- * @param string $message The message to be logged. This should be a string, and it will be output exactly as provided,
- *                        followed by a system-specific newline character.
+ * The message is appended with PHP_EOL to ensure proper line breaks on
+ * different operating systems.
  *
- * @return void This function does not return a value. It directly writes the message to STDOUT, which is typically
- *              visible in the console or terminal where the PHP script is executed.
+ * @param string $message The message to be logged.
  *
- * @uses fwrite() to write the message to STDOUT. This is a low-level file operation function that works with various
- *      file streams, including standard output, standard error, and regular files.
+ * @return void This function does not return a value. It directly writes the
+ * message to STDOUT, which is typically visible in the console or terminal
+ * where the PHP script is executed.
+ *
+ * @uses fwrite() to write the message to STDOUT. This is a low-level file
+ * operation function that works with various file streams, including standard
+ * output, standard error, and regular files.
  */
 function log_message( $message ) {
 	fwrite( STDOUT, $message . PHP_EOL );
 }
 
 /**
- * Writes an error message prefixed with "Error: " to the standard error output (STDERR) and terminates the script
- * with a status code of 1. This function is typically used to report errors during script execution, where an
- * immediate halt is necessary due to unrecoverable conditions. The message is appended with the PHP end-of-line
- * constant (PHP_EOL) to ensure it is properly displayed on all operating systems.
+ * Displays an error message and terminates the test runner execution.
  *
- * @param string $message The error message to be logged. This string will be output as provided, but prefixed
- *                        with "Error: " to indicate its nature, followed by a system-specific newline character.
+ * The error message is prefixed with "Error: " and appended with PHP_EOL
+ * before being written to the standard output (STDOUT).
  *
- * @return void This function does not return a value. It directly writes the error message to STDERR and then
- *              terminates the script execution using `exit(1)`, indicating an error condition to the environment.
+ * After outputting the error message, the script will be terminated with a
+ * status code of 1.
  *
- * @uses fwrite() to write the error message to STDERR. This function is used for low-level writing to file streams
- *      or output streams, in this case, STDERR, which is specifically for error reporting.
- * @uses exit() to terminate the script execution with a status code of 1, indicating an error has occurred. This is
- *      a common practice in command-line scripts and applications to signal failure to the calling process or environment.
+ * @param string $message The error message to be logged. This string will be
+ * output as provided, but prefixed with "Error: " to indicate its nature,
+ * followed by a system-specific newline character.
+ *
+ * @return void This function does not return a value. It directly writes the
+ * error message to STDERR and then terminates the script execution using
+ * `exit(1)`, indicating an error condition to the environment.
+ *
+ * @uses fwrite() to write the error message to STDERR. This function is used
+ * for low-level writing to file streams or output streams, in this case,
+ * STDERR, which is specifically for error reporting.
  */
 function error_message( $message ) {
 	fwrite( STDERR, 'Error: ' . $message . PHP_EOL );
@@ -112,54 +181,103 @@ function error_message( $message ) {
 }
 
 /**
- * Ensures a single trailing slash is present at the end of a given string. This function first removes any existing
- * trailing slashes from the input string to avoid duplication and then appends a single slash. It's commonly used
- * to normalize file paths or URLs to ensure consistency in format, especially when concatenating paths or performing
- * file system operations that expect a trailing slash.
+ * Ensures a single trailing slash is present at the end of a given string.
  *
- * @param string $string The input string to which a trailing slash will be added. This could be a file path, URL,
- *                       or any other string that requires a trailing slash for proper formatting or usage.
+ * File system operations often expect a single trailing slash when referring
+ * to directories or paths. This ensures that only one trailing slash is
+ * present at the end of a given string.
  *
- * @return string The modified string with a single trailing slash appended at the end. If the input string already
- *                has one or more trailing slashes, they will be trimmed to a single slash.
+ * @param string $string The input string to which a trailing slash will be
+ * added. This could be a file path, URL, or any other string that requires a
+ * trailing slash for proper formatting or usage.
  *
- * @uses rtrim() to remove any existing trailing slashes from the input string before appending a new trailing slash.
- *      This ensures that the result consistently has exactly one trailing slash, regardless of the input string's initial state.
+ * @return string The modified string with a single trailing slash appended at
+ * the end. If the input string already has one or more trailing slashes, they
+ * will be trimmed to a single slash.
+ *
+ * @uses rtrim() to remove any existing trailing slashes from the input string
+ * before appending a new trailing slash. This ensures that the result
+ * consistently has exactly one trailing slash, regardless of the input string's
+ * initial state.
  */
-function trailingslashit( $string ) {
-	return rtrim( $string, '/' ) . '/';
+function trailingslashit( $str ) {
+	return rtrim( $str, '/' ) . '/';
 }
 
 /**
- * Parses JUnit XML formatted string to extract test results, focusing specifically on test failures and errors.
- * The function converts the XML data into a structured JSON format that summarizes the overall test outcomes,
- * including the total number of tests, failures, errors, and execution time. Only test suites and cases that
- * contain failures or errors are included in the final JSON output. This function is useful for automated test
- * result analysis, continuous integration reporting, or any scenario where a quick summary of test failures and
- * errors is needed.
+ * Extracts test results from a JUnit XML string.
  *
- * @param string $xml_string The JUnit XML data as a string. This should be well-formed XML representing the results
- *                           of test executions, typically generated by testing frameworks compatible with JUnit reporting.
+ * This extracts the relevant information from the test results into a format
+ * accepted and understood by the WordPress Test Reporter plugin.
  *
- * @return string A JSON encoded string that represents a summary of the test results, including overall metrics and
- *                detailed information about each failed or errored test case. The JSON structure will include keys
- *                for 'tests', 'failures', 'errors', 'time', and 'testsuites', where 'testsuites' is an array of test
- *                suites that contains the failures or errors.
+ * The data specifically extracted is:
+ * - Total number of tests.
+ * - Number of failures.
+ * - Number of errors.
+ * - Overall execution time.
  *
- * @uses simplexml_load_string() to parse the JUnit XML data into an object for easy access and manipulation of the XML elements.
- * @uses xpath() to query specific elements within the XML structure, particularly to find test suites with failures or errors.
- * @uses json_encode() to convert the array structure containing the test results into a JSON formatted string.
+ * When the XML data is missing, empty, unparseable, or carries no usable
+ * result counts, execution stops with an error instead of returning an
+ * empty or hollow result, because such a result is either rejected much
+ * later with a confusing error or displayed in a misleading way. See
+ * issue #311.
+ *
+ * @param string $xml_string The JUnit XML data as a string. This should be
+ * well-formed XML representing the results of test executions, typically
+ * generated by testing frameworks compatible with JUnit reporting.
+ *
+ * @return string A JSON encoded string that represents a summary of the test
+ * results, including overall metrics and detailed information about each failed
+ * or errored test case. The JSON structure will include keys for 'tests',
+ * 'failures', 'errors', 'time', and 'testsuites', where 'testsuites' is an
+ * array of test suites that contains the failures or errors.
+ *
+ * @uses simplexml_load_string() to parse the JUnit XML data into an object for
+ * easy access and manipulation of the XML elements.
+ *
+ * @uses xpath() to query specific elements within the XML structure,
+ * particularly to find test suites with failures or errors.
+ *
+ * @uses json_encode() to convert the array structure containing the test
+ * results into a JSON formatted string.
  */
-function process_junit_xml( $xml_string )
-{
+function process_junit_xml( $xml_string ) {
 	if ( empty( $xml_string ) ) {
-		return '';
+		error_message( 'junit.xml is missing or empty, so there are no test results to report. Aborting instead of reporting an empty result as a success. See https://github.com/WordPress/phpunit-test-runner/issues/311.' );
 	}
 
+	$previous_libxml_setting = libxml_use_internal_errors( true );
+	libxml_clear_errors();
+
 	$xml = simplexml_load_string( $xml_string );
+
+	$errors = libxml_get_errors();
+	libxml_clear_errors();
+	libxml_use_internal_errors( $previous_libxml_setting );
+
+	if ( false === $xml ) {
+		$detail = '';
+		if ( ! empty( $errors ) ) {
+			$first  = $errors[0];
+			$detail = ' First parser error: ' . trim( $first->message ) . ' at line ' . (int) $first->line . '.';
+		}
+		error_message( 'junit.xml could not be parsed as XML, so the test results are unreadable. Aborting instead of reporting an unreadable result as a success.' . $detail . ' See https://github.com/WordPress/phpunit-test-runner/issues/311.' );
+	}
+
 	$xml_string = null;
-	$project = $xml->testsuite;
+
+	// PHPUnit wraps everything in <testsuites>, but a root <testsuite>
+	// element is also a legitimate JUnit shape from other producers.
+	$project = 'testsuite' === $xml->getName() ? $xml : $xml->testsuite;
 	$results = array();
+
+	if (
+		! isset( $project['tests'] ) || '' === (string) $project['tests'] ||
+		! isset( $project['failures'] ) || '' === (string) $project['failures'] ||
+		! isset( $project['errors'] ) || '' === (string) $project['errors']
+	) {
+		error_message( 'junit.xml parsed but contains no usable test result counts, so the test results are unusable. A result without failure and error counts would be displayed as a success. Aborting instead. See https://github.com/WordPress/phpunit-test-runner/issues/311.' );
+	}
 
 	$results = array(
 		'tests'    => (string) $project['tests'],
@@ -170,21 +288,22 @@ function process_junit_xml( $xml_string )
 
 	$results['testsuites'] = array();
 
-	$testsuites = $xml->xpath( '//testsuites//testsuite[ ( count( testcase ) > 0 ) and ( @errors > 0 or @failures > 0 ) ]' );
+	$testsuites = $xml->xpath( '//testsuite[ ( count( testcase ) > 0 ) and ( @errors > 0 or @failures > 0 ) ]' );
 	foreach ( $testsuites as $testsuite ) {
 		$result = array(
 			'name'     => (string) $testsuite['name'],
 			'tests'    => (string) $testsuite['tests'],
 			'failures' => (string) $testsuite['failures'],
-			'errors'   => (string) $testsuite['errors']
+			'errors'   => (string) $testsuite['errors'],
 		);
+
 		if ( empty( $result['failures'] ) && empty( $result['errors'] ) ) {
 			continue;
 		}
 		$failures = array();
 		foreach ( $testsuite->testcase as $testcase ) {
 			// Capture both failure and error children.
-			foreach ( array( 'failure', 'error') as $key ) {
+			foreach ( array( 'failure', 'error' ) as $key ) {
 				if ( isset( $testcase->{$key} ) ) {
 					$failures[ (string) $testcase['name'] ] = array(
 						'name' => (string) $testcase['name'],
@@ -194,7 +313,7 @@ function process_junit_xml( $xml_string )
 			}
 		}
 		if ( $failures ) {
-			$results['testsuites'][ (string) $testsuite['name'] ] = $result;
+			$results['testsuites'][ (string) $testsuite['name'] ]              = $result;
 			$results['testsuites'][ (string) $testsuite['name'] ]['testcases'] = $failures;
 		}
 	}
@@ -203,55 +322,76 @@ function process_junit_xml( $xml_string )
 }
 
 /**
- * Submits test results along with associated metadata to a specified reporting API. The function constructs
- * a POST request containing the test results, SVN revision, SVN message, environment data, and uses an API key
- * for authentication. The reporting API's URL is retrieved from an environment variable; if not found, a default
- * URL is used. This function is typically used to automate the reporting of test outcomes to a centralized system
- * for analysis, tracking, and historical record-keeping.
+ * Submits test results to a reporting API endpoint.
  *
- * @param string $results The test results in a processed format (e.g., JSON) ready for submission to the reporting API.
- * @param string $rev     The SVN revision associated with the test results. This often corresponds to a specific code
- *                        commit or build identifier.
- * @param string $message The SVN commit message associated with the revision, providing context or notes about the changes.
- * @param string $env     The environment data in JSON format, detailing the conditions under which the tests were run,
- *                        such as operating system, PHP version, etc.
- * @param string $api_key The API key for authenticating with the reporting API, ensuring secure and authorized access.
+ * This submits test results and related metadata to a site running the
+ * WordPress Test Reporter plugin using cURL.
  *
- * @return array An array containing two elements: the HTTP status code of the response (int) and the body of the response
- *               (string) from the reporting API. This can be used to verify successful submission or to handle errors.
+ * Reports are always submitted to WordPress.org Unless the WPT_REPORT_URL
+ * environment variable is set.
  *
- * @uses curl_init(), curl_setopt(), and curl_exec() to perform the HTTP POST request to the reporting API.
- * @uses json_encode() to encode the data payload as a JSON string for submission.
- * @uses base64_encode() to encode the API key for HTTP Basic Authentication in the Authorization header.
+ * @param string $results The test results in a processed format (e.g., JSON)
+ * ready for submission to the reporting API.
+ *
+ * @param string $rev The SVN revision associated with the test results. This
+ * often corresponds to a specific code commit or build identifier.
+ *
+ * @param string $message The SVN commit message associated with the revision,
+ * providing context or notes about the changes.
+ *
+ * @param string $env The environment data in JSON format, detailing the
+ * conditions under which the tests were run, such as operating system, PHP
+ * version, etc.
+ *
+ * @param string $api_key The API key for authenticating with the reporting API,
+ * ensuring secure and authorized access.
+ *
+ * @return array An array containing two elements: the HTTP status code of the
+ * response (int) and the body of the response (string) from the reporting API.
+ * This can be used to verify successful submission or to handle errors.
+ *
+ * @uses curl_init(), curl_setopt(), and curl_exec() to perform the HTTP POST
+ * request to the reporting API.
+ *
+ * @uses json_encode() to encode the data payload as a JSON string for
+ * submission.
+ *
+ * @uses base64_encode() to encode the API key for HTTP Basic Authentication in
+ * the Authorization header.
  */
 function upload_results( $results, $rev, $message, $env, $api_key ) {
-	$WPT_REPORT_URL = getenv( 'WPT_REPORT_URL' );
-	if ( ! $WPT_REPORT_URL ) {
-		$WPT_REPORT_URL = 'https://make.wordpress.org/hosting/wp-json/wp-unit-test-api/v1/results';
+	$wpt_report_url = getenv( 'WPT_REPORT_URL' );
+	if ( ! $wpt_report_url ) {
+		$wpt_report_url = 'https://make.wordpress.org/hosting/wp-json/wp-unit-test-api/v1/results';
 	}
-	$process = curl_init( $WPT_REPORT_URL );
+	$process      = curl_init( $wpt_report_url );
 	$access_token = base64_encode( $api_key );
-	$data = array(
+	$data         = array(
 		'results' => $results,
 		'commit'  => $rev,
 		'message' => $message,
 		'env'     => $env,
 	);
-	$data_string = json_encode( $data );
+	$data_string  = json_encode( $data );
 
+	// Set CURL options.
 	curl_setopt( $process, CURLOPT_TIMEOUT, 30 );
 	curl_setopt( $process, CURLOPT_POST, 1 );
 	curl_setopt( $process, CURLOPT_CUSTOMREQUEST, 'POST' );
 	curl_setopt( $process, CURLOPT_USERAGENT, 'WordPress PHPUnit Test Runner' );
 	curl_setopt( $process, CURLOPT_POSTFIELDS, $data_string );
 	curl_setopt( $process, CURLOPT_RETURNTRANSFER, true );
-	curl_setopt( $process, CURLOPT_HTTPHEADER, array(
-		"Authorization: Basic $access_token",
-		'Content-Type: application/json',
-		'Content-Length: ' . strlen( $data_string )
-	));
+	curl_setopt(
+		$process,
+		CURLOPT_HTTPHEADER,
+		array(
+			"Authorization: Basic $access_token",
+			'Content-Type: application/json',
+			'Content-Length: ' . strlen( $data_string ),
+		)
+	);
 
-	$return = curl_exec( $process );
+	$return      = curl_exec( $process );
 	$status_code = curl_getinfo( $process, CURLINFO_HTTP_CODE );
 	curl_close( $process );
 
@@ -259,44 +399,227 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
 }
 
 /**
- * Collects and returns an array of key environment details relevant to the application's context. This includes
- * the PHP version, installed PHP modules with their versions, system utilities like curl and OpenSSL versions,
- * MySQL version, and operating system details. This function is useful for diagnostic purposes, ensuring
- * compatibility, or for reporting system configurations in debugging or error logs.
+ * Parse a WordPress-style database host into mysqli connection pieces.
  *
- * The function checks for the availability of specific PHP modules and system utilities and captures their versions.
- * It uses shell commands to retrieve system information, which requires the PHP environment to have access to these
- * commands and appropriate permissions.
+ * @param string $host Database host string.
  *
- * @return array An associative array containing detailed environment information. The array includes:
+ * @return array|false Parsed connection pieces, or false on invalid input.
+ */
+function wpt_runner_parse_db_host( $host ) {
+	$host = (string) $host;
+	$socket = null;
+	$port = null;
+	$is_ipv6 = false;
+
+	if ( '' === $host ) {
+		return false;
+	}
+
+	$socket_pos = strpos( $host, ':/' );
+	if ( false !== $socket_pos ) {
+		$socket = substr( $host, $socket_pos + 1 );
+		$host = substr( $host, 0, $socket_pos );
+	}
+
+	if ( substr_count( $host, ':' ) > 1 ) {
+		if ( 1 !== preg_match( '/^(?:\[(?P<host>[0-9a-fA-F:.]+)\](?::(?P<port>[0-9]+))?|(?P<host_unbracketed>[0-9a-fA-F:.]+))$/', $host, $matches ) ) {
+			return false;
+		}
+		$parsed_host = ! empty( $matches['host'] ) ? $matches['host'] : ( isset( $matches['host_unbracketed'] ) ? $matches['host_unbracketed'] : '' );
+		$is_ipv6 = true;
+	} else {
+		if ( 1 !== preg_match( '/^(?P<host>[^:]*)(?::(?P<port>[0-9]+))?$/', $host, $matches ) ) {
+			return false;
+		}
+		$parsed_host = $matches['host'];
+	}
+
+	if ( '' === $parsed_host ) {
+		return false;
+	}
+
+	if ( isset( $matches['port'] ) && '' !== $matches['port'] ) {
+		$port = (int) $matches['port'];
+	}
+
+	return array(
+		'host'    => $parsed_host,
+		'port'    => $port,
+		'socket'  => $socket,
+		'is_ipv6' => $is_ipv6,
+	);
+}
+
+// The report.php fallback runs without WordPress bootstrap, so $wpdb is unavailable.
+// phpcs:disable WordPress.DB.RestrictedFunctions -- Direct mysqli is limited to database version reporting.
+/**
+ * Gets the database server version, if it can be detected safely.
+ *
+ * @param string $db_host     Database host.
+ * @param string $db_user     Database user.
+ * @param string $db_password Database password.
+ * @param string $db_name     Database name.
+ *
+ * @return string Raw server version string, or an empty string.
+ */
+function wpt_runner_get_db_server_version( $db_host, $db_user, $db_password, $db_name ) {
+	$db_host = trim( (string) $db_host );
+	$db_user = trim( (string) $db_user );
+	$db_password = (string) $db_password;
+	$db_name = trim( (string) $db_name );
+
+	if ( '' === $db_host ) {
+		$db_host = 'localhost';
+	}
+
+	if ( '' === $db_user || '' === $db_name ) {
+		return '';
+	}
+
+	if ( ! class_exists( 'mysqli' ) ) {
+		return '';
+	}
+
+	$required_functions = array(
+		'mysqli_close',
+		'mysqli_fetch_row',
+		'mysqli_free_result',
+		'mysqli_init',
+		'mysqli_options',
+		'mysqli_query',
+		'mysqli_real_connect',
+	);
+
+	foreach ( $required_functions as $function_name ) {
+		if ( ! function_exists( $function_name ) ) {
+			return '';
+		}
+	}
+
+	$parsed_host = wpt_runner_parse_db_host( $db_host );
+	if ( false === $parsed_host ) {
+		return '';
+	}
+	$connect_host = $parsed_host['host'];
+	// mysqlnd expects IPv6 hosts in brackets, matching WordPress core's connection handling.
+	if ( $parsed_host['is_ipv6'] && extension_loaded( 'mysqlnd' ) ) {
+		$connect_host = '[' . $connect_host . ']';
+	}
+
+	$mysqli = null;
+	$mysqli_report_mode = null;
+
+	try {
+		if ( class_exists( 'mysqli_driver' ) ) {
+			$mysqli_driver = new mysqli_driver();
+			$mysqli_report_mode = $mysqli_driver->report_mode;
+		}
+
+		if ( function_exists( 'mysqli_report' ) ) {
+			mysqli_report( MYSQLI_REPORT_OFF );
+		}
+
+		$mysqli = mysqli_init();
+		if ( false === $mysqli ) {
+			return '';
+		}
+
+		if ( defined( 'MYSQLI_OPT_CONNECT_TIMEOUT' ) ) {
+			mysqli_options( $mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 5 );
+		}
+
+		if ( ! @mysqli_real_connect(
+			$mysqli,
+			$connect_host,
+			$db_user,
+			$db_password,
+			$db_name,
+			$parsed_host['port'],
+			$parsed_host['socket']
+		) ) {
+			return '';
+		}
+
+		$result = @mysqli_query( $mysqli, 'SELECT VERSION()' );
+		if ( ! is_object( $result ) ) {
+			return '';
+		}
+
+		$row = mysqli_fetch_row( $result );
+		mysqli_free_result( $result );
+
+		if ( ! is_array( $row ) || ! isset( $row[0] ) || '' === (string) $row[0] ) {
+			return '';
+		}
+
+		return (string) $row[0];
+	} catch ( Throwable $e ) {
+		return '';
+	} finally {
+		if ( $mysqli instanceof mysqli ) {
+			@mysqli_close( $mysqli );
+		}
+		if ( null !== $mysqli_report_mode && function_exists( 'mysqli_report' ) ) {
+			mysqli_report( $mysqli_report_mode );
+		}
+	}
+}
+
+// phpcs:enable WordPress.DB.RestrictedFunctions
+
+/**
+ * Collects details about the testing environment.
+ *
+ * The versions of PHP, PHP modules, database software, and system utilities
+ * can impact the results of the test suite. This gathers the relevant details
+ * to include in test report submissions.
+ *
+ * @return array An associative array containing detailed environment
+ *               information. The array includes:
  *               - 'php_version': The current PHP version.
  *               - 'php_modules': An associative array of selected PHP modules and their versions.
- *               - 'system_utils': Versions of certain system utilities such as 'curl', 'imagemagick', 'graphicsmagick', and 'openssl'.
- *               - 'mysql_version': The version of MySQL installed.
+ *               - 'system_utils': Versions of certain system utilities such as 'curl', 'imagemagick',
+ *                 'graphicsmagick', and 'openssl'.
+ *               - 'mysql_version': The version of the database server.
  *               - 'os_name': The name of the operating system.
  *               - 'os_version': The version of the operating system.
  *
  * @uses phpversion() to get the PHP version and module versions.
- * @uses shell_exec() to execute system commands for retrieving MySQL version, OS details, and versions of utilities like curl and OpenSSL.
- * @uses class_exists() to check for the availability of the Imagick and Gmagick classes for version detection.
+ *
+ * @uses shell_exec() to execute system commands for retrieving OS details
+ *                    and versions of utilities like curl and OpenSSL.
+ *
+ * @uses class_exists() to check for the availability of the Imagick and Gmagick
+ *                      classes for version detection.
  */
 function get_env_details() {
 
 	$gd_info = array();
-	if( extension_loaded( 'gd' ) ) {
+	if ( extension_loaded( 'gd' ) ) {
 		$gd_info = gd_info();
 	}
 	$imagick_info = array();
-	if( extension_loaded( 'imagick' ) ) {
+	if ( extension_loaded( 'imagick' ) ) {
 		$imagick_info = Imagick::queryFormats();
 	}
+
+	$wpt_db_host = trim( getenv( 'WPT_DB_HOST' ) );
+	if ( ! $wpt_db_host ) {
+		$wpt_db_host = 'localhost';
+	}
+	$wpt_db_user     = trim( getenv( 'WPT_DB_USER' ) );
+	$wpt_db_password = getenv( 'WPT_DB_PASSWORD' );
+	if ( false === $wpt_db_password ) {
+		$wpt_db_password = '';
+	}
+	$wpt_db_name = trim( getenv( 'WPT_DB_NAME' ) );
 
 	$env = array(
 		'php_version'    => phpversion(),
 		'php_modules'    => array(),
 		'gd_info'        => $gd_info,
 		'imagick_info'   => $imagick_info,
-		'mysql_version'  => trim( shell_exec( 'mysql --version' ) ),
+		'mysql_version'  => wpt_runner_get_db_server_version( $wpt_db_host, $wpt_db_user, $wpt_db_password, $wpt_db_name ),
 		'system_utils'   => array(),
 		'os_name'        => trim( shell_exec( 'uname -s' ) ),
 		'os_version'     => trim( shell_exec( 'uname -r' ) ),
@@ -340,25 +663,15 @@ function get_env_details() {
 		'zip',
 		'zlib',
 	);
-	foreach( $php_modules as $php_module ) {
+	foreach ( $php_modules as $php_module ) {
 		$env['php_modules'][ $php_module ] = phpversion( $php_module );
 	}
 
-	function curl_selected_bits($k) { return in_array($k, array('version', 'ssl_version', 'libz_version')); }
-	$curl_bits = curl_version();
-	$env['system_utils']['curl'] = implode(' ',array_values(array_filter($curl_bits, 'curl_selected_bits',ARRAY_FILTER_USE_KEY) ));
-
-	$WPT_DB_HOST		 	= trim( getenv( 'WPT_DB_HOST' ) );
-	if( ! $WPT_DB_HOST ) {
-		$WPT_DB_HOST = 'localhost';
+	function curl_selected_bits( $k ) {
+		return in_array( $k, array( 'version', 'ssl_version', 'libz_version' ), true );
 	}
-	$WPT_DB_USER 			= trim( getenv( 'WPT_DB_USER' ) );
-	$WPT_DB_PASSWORD 	= trim( getenv( 'WPT_DB_PASSWORD' ) );
-	$WPT_DB_NAME 			= trim( getenv( 'WPT_DB_NAME' ) );
-
-	//$mysqli = new mysqli( $WPT_DB_HOST, $WPT_DB_USER, $WPT_DB_PASSWORD, $WPT_DB_NAME );
-	//$env['mysql_version'] = $mysqli->query("SELECT VERSION()")->fetch_row()[0];
-	//$mysqli->close();
+	$curl_bits                   = curl_version();
+	$env['system_utils']['curl'] = implode( ' ', array_values( array_filter( $curl_bits, 'curl_selected_bits', ARRAY_FILTER_USE_KEY ) ) );
 
 	if ( class_exists( 'Imagick' ) ) {
 		$imagick = new Imagick();
@@ -375,4 +688,47 @@ function get_env_details() {
 	$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
 
 	return $env;
+}
+
+/**
+ * Drops the WordPress test tables so the next run starts clean.
+ *
+ * Stale rows survive the test suite's own install step, because WordPress
+ * boots before the tables are dropped and writes data it loaded into memory,
+ * such as user roles, back into the fresh tables. See issue #110.
+ *
+ * The tables live in the test environment, so when an SSH connection is
+ * configured the cleanup-db.php script is piped to the remote PHP binary on
+ * stdin. The script reads the database credentials from wp-tests-config.php
+ * in the test directory, so no password appears on any command line.
+ *
+ * A failure is reported as a warning rather than stopping execution, so the
+ * directory cleanup in cleanup.php always runs. Set the WPT_SKIP_DB_CLEANUP
+ * environment variable to skip this step entirely.
+ *
+ * @param array $runner_vars Test runner configuration options.
+ *
+ * @uses log_message() to log the executed command and any warning.
+ */
+function cleanup_database( $runner_vars ) {
+	if ( (bool) getenv( 'WPT_SKIP_DB_CLEANUP' ) ) {
+		log_message( 'WPT_SKIP_DB_CLEANUP is set, skipping database cleanup.' );
+		return;
+	}
+
+	$script = __DIR__ . '/cleanup-db.php';
+
+	if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+		$remote_command = $runner_vars['WPT_PHP_EXECUTABLE'] . ' -- ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] );
+		$command        = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $remote_command ) . ' < ' . escapeshellarg( $script );
+	} else {
+		$command = $runner_vars['WPT_PHP_EXECUTABLE'] . ' ' . escapeshellarg( $script ) . ' ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] );
+	}
+
+	log_message( $command );
+	passthru( $command, $return_code );
+
+	if ( 0 !== $return_code ) {
+		log_message( 'Warning: database cleanup did not complete, continuing with directory cleanup.' );
+	}
 }
