@@ -14,3 +14,6 @@ wp-test-runner/
 *.orig
 *.patch
 *.diff
+
+# Results of containerized runs.
+output/

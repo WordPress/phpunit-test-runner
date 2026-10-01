@@ -1,0 +1,7 @@
+.git
+.github
+.cache
+.env*
+vendor
+output
+wp-test-runner
