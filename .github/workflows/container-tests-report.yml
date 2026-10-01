@@ -64,14 +64,16 @@ jobs:
               state: 'open',
               per_page: 100,
             } );
+            // The head repository is null when the fork has been deleted.
+            const headRepo = run.head_repository ? run.head_repository.full_name : '';
             const pull = pulls.find(
               ( pr ) =>
                 pr.head.sha === run.head_sha &&
                 pr.head.repo &&
-                pr.head.repo.full_name === run.head_repository.full_name
+                pr.head.repo.full_name === headRepo
             );
             if ( ! pull ) {
-              core.info( `No open pull request found for ${ run.head_repository.full_name }@${ run.head_sha }.` );
+              core.info( `No open pull request found for ${ headRepo || 'a deleted repository' }@${ run.head_sha }.` );
               return;
             }
 
@@ -79,7 +81,8 @@ jobs:
             if ( fs.existsSync( 'results' ) ) {
               for ( const dir of fs.readdirSync( 'results' ).sort() ) {
                 const file = path.join( 'results', dir, 'summary.md' );
-                if ( fs.existsSync( file ) ) {
+                // Only read regular files from the untrusted artifacts.
+                if ( fs.existsSync( file ) && fs.lstatSync( file ).isFile() ) {
                   summaries.push( fs.readFileSync( file, 'utf8' ).trim() );
                 }
               }
@@ -112,7 +115,11 @@ jobs:
               per_page: 100,
             } );
             const existing = comments.find(
-              ( comment ) => comment.user.type === 'Bot' && comment.body.startsWith( marker )
+              ( comment ) =>
+                comment.user &&
+                comment.user.login === 'github-actions[bot]' &&
+                comment.body &&
+                comment.body.startsWith( marker )
             );
 
             if ( existing ) {

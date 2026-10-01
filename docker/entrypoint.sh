@@ -115,10 +115,11 @@ collect_results() {
 
 if [ -z "${WPT_SSH_CONNECT:-}" ] && ! wait_for_database; then
 	record database failed 1 0
+	record prepare skipped - 0
+	record test skipped - 0
+	record report skipped - 0
 	exit_code=1
-fi
-
-if [ "${exit_code}" -eq 0 ] && run_step prepare; then
+elif run_step prepare; then
 	if [ -n "${WPT_IGNORE_TEST_FAILURES:-}" ] && [ "${WPT_IGNORE_TEST_FAILURES}" != 0 ]; then
 		run_step test optional
 	else

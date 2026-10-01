@@ -8,7 +8,7 @@
 #
 # The PHP and database versions are set with environment variables, for example:
 #
-#   PHP_VERSION=7.4 WPT_DB_IMAGE=mariadb:10.6 docker compose up --build ...
+#   PHP_VERSION=8.1 WPT_DB_IMAGE=mariadb:10.6 docker compose up --build ...
 #
 # Any WPT_* variable from .env.default can be passed through the same way.
 

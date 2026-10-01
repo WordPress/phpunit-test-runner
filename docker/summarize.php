@@ -153,7 +153,8 @@ $db_label    = getenv( 'WPT_DB_LABEL' );
 
 if ( empty( $failed ) ) {
 	$heading = '✅ passed';
-} elseif ( array( 'test' ) === array_values( array_column( $failed, 'name' ) ) ) {
+} elseif ( null !== $junit && array( 'test' ) === array_values( array_column( $failed, 'name' ) ) ) {
+	// Only the tests failed, and they produced results to look at.
 	$heading = '⚠️ runner passed, some tests failed';
 } else {
 	$heading = '❌ runner failed';
