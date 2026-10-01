@@ -663,7 +663,7 @@ Set `WPT_IGNORE_TEST_FAILURES=1` to exit with 0 when WordPress tests fail but ev
 
 To open a shell in the runner image instead, use `docker compose run --rm runner bash`.
 
-The [Container Tests](.github/workflows/container-tests.yml) workflow runs the same setup on every pull request. It shows the summary on the workflow run and uploads the `output/` directory as an artifact.
+The [Container Tests](.github/workflows/container-tests.yml) workflow runs the same setup on every pull request. It shows the summary on the workflow run and uploads the `output/` directory as an artifact. The [Container Tests Report](.github/workflows/container-tests-report.yml) workflow then posts the summaries as a comment on the pull request, and updates that comment on later runs.
 
 ## Contributing
 
