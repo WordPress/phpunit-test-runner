@@ -130,6 +130,22 @@ nodejs --version
 npm --version
 ```
 
+#### Why NodeJS is needed
+
+The PHPUnit tests are PHP, but they do not run on a plain checkout of `wordpress-develop`. Some files that WordPress loads are not in version control. A build step creates them.
+
+`prepare.php` runs `npm install && npm run build` in the checkout. For the tests, the important part is the Gutenberg step (`build:gutenberg` in the [Gruntfile](https://github.com/WordPress/wordpress-develop/blob/trunk/Gruntfile.js)):
+
+1. It downloads the built Gutenberg artifact for the version pinned in `package.json` (`gutenberg.sha`). The download comes from `ghcr.io`, so the server must be able to connect to it.
+2. It copies the block editor PHP files, routes, blocks, scripts, styles and `theme.json` into `src/`.
+
+The tests load WordPress from `src/` (`ABSPATH` in `wp-tests-config.php`). These files were removed from version control in [changeset 61438](https://core.trac.wordpress.org/changeset/61438). Without the build, the tests fail when they load WordPress, for example on a missing `src/wp-includes/build/routes.php` ([#292](https://github.com/WordPress/phpunit-test-runner/issues/292)).
+
+Also:
+
+- Use the Node.js and npm versions in the `engines` field of `wordpress-develop/package.json`. Its `.npmrc` sets `engine-strict = true`, so `npm install` stops on older versions.
+- `npm run build` also makes the production build: it copies files to `build/` and minifies JavaScript and CSS. The PHPUnit tests do not use these files. WordPress Core runs its own PHPUnit workflow after `npm ci` and `npm run build:dev`. [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
+
 ### PHP Composer
 
 _This is a simple example for Debian / Ubuntu._
