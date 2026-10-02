@@ -9,8 +9,10 @@
 # Usage:
 #   ./host-tools/testrunner.sh
 #
-# Example cron entry (every 4 hours):
-#   0 */4 * * * /home/wptestrunner/phpunit-test-runner/host-tools/testrunner.sh >> /home/wptestrunner/testrunner.log 2>&1
+# Example cron entry (every 4 hours). Replace /path/to/phpunit-test-runner with
+# the directory of your clone. The script finds the runner from its own location,
+# so it does not need to be started from that directory:
+#   0 */4 * * * /path/to/phpunit-test-runner/host-tools/testrunner.sh >> /path/to/testrunner.log 2>&1
 #
 # Optional environment variables:
 #   WPT_RUNNER_DIR   Path to the runner directory. Default: the parent of this script's directory.
