@@ -45,11 +45,13 @@ The scripts do not install software, create the database, or set up cron.
 
    A run can take a long time. Each run clones WordPress and installs the npm and Composer dependencies again.
 
-4. Run the tests on a schedule. For example, a cron entry for every 4 hours:
+4. Run the tests on a schedule. For example, a cron entry for every 4 hours. Replace `/path/to/phpunit-test-runner` with the directory of your clone:
 
    ```
-   0 */4 * * * /home/wptestrunner/phpunit-test-runner/host-tools/testrunner.sh >> /home/wptestrunner/testrunner.log 2>&1
+   0 */4 * * * /path/to/phpunit-test-runner/host-tools/testrunner.sh >> /path/to/testrunner.log 2>&1
    ```
+
+   The script finds the runner from its own location, so cron does not need to change to that directory first.
 
 To report results to the [Host Test Results](https://make.wordpress.org/hosting/test-results/) page, you need a bot user with the "Test Reporter" role. See [How to report](https://make.wordpress.org/hosting/handbook/tests/). After you get the application password, run `./host-tools/setup.sh` again and enter it as `botuser:application password`.
 
