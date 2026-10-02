@@ -161,7 +161,13 @@ cd phpunit-test-runner/
 
 ## Configuring the Runner
 
-The next step will be to configure the environment. To do this, make a copy of the example file and then configure it.
+The fastest way is the setup script. It checks the required software, asks for the database credentials and the report API key, tests the database connection, and creates `.env`:
+
+```
+./host-tools/setup.sh
+```
+
+To configure the runner by hand, make a copy of the example file and then configure it.
 
 ```
 cp .env.default .env
