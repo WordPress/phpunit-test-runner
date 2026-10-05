@@ -82,7 +82,7 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
  * The following actions are performed:
  * - Creates a directory to prepare wordpress-develop.
  * - Clones the WordPress/wordpress-develop repository from GitHub.
- * - Install npm dependencies and run the build script.
+ * - Install npm dependencies and run the development build script.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations(
@@ -95,8 +95,12 @@ perform_operations(
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
-		// Change directory to the preparation directory, install npm dependencies, and build the project.
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build',
+		/*
+		 * Change directory to the preparation directory, install npm dependencies, and build the project.
+		 * The development build writes the built files into `src/`, which is the directory the test suite
+		 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
+		 */
+		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build:dev',
 
 	)
 );
