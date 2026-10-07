@@ -143,7 +143,7 @@ The Gutenberg build step:
 3. Copies the required Gutenberg files into the WordPress `src/` directory.
 4. Makes those files available to the WordPress installation that PHPUnit loads during the test run.
 
-The PHPUnit test suite loads WordPress from the `src/` directory. Therefore, these build steps must complete successfully before the tests can run. If the Gutenberg files have not been prepared, the test suite can fail while loading WordPress because required files are missing, for example `src/wp-includes/build/routes.php` ([#292](https://github.com/WordPress/phpunit-test-runner/issues/292)).
+The PHPUnit test suite loads WordPress from the `src/` directory. Therefore, these build steps must complete successfully before the tests can run. If the Gutenberg files have not been prepared, the test suite can fail while loading WordPress because required files are missing, as happened with `src/wp-includes/build/routes.php` in [#292](https://github.com/WordPress/phpunit-test-runner/issues/292).
 
 This is why Node.js and npm are requirements for the test runner even though the tests themselves are written in PHP.
 
