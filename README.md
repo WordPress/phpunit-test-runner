@@ -139,7 +139,7 @@ The test runner uses `prepare.php` to set up a WordPress checkout and prepare it
 The Gutenberg build step:
 
 1. Uses the Gutenberg version pinned by WordPress Core (`gutenberg.sha` in `package.json`).
-2. Downloads the corresponding pre-built Gutenberg artifact from GitHub Container Registry (`ghcr.io`), so the server must be able to connect to `ghcr.io`.
+2. Downloads the corresponding pre-built Gutenberg artifact from GitHub Container Registry (`ghcr.io`). The download redirects to `pkg-containers.githubusercontent.com`, so the server must be able to connect to both domains.
 3. Copies the required Gutenberg files into the WordPress `src/` directory.
 4. Makes those files available to the WordPress installation that PHPUnit loads during the test run.
 
