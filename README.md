@@ -241,7 +241,7 @@ export WPT_SSH_OPTIONS=""
 export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 # Output logging
-# Use 'verbose' to increase verbosity
+# Use 'verbose' to increase verbosity; also runs npm with --loglevel=silly
 export WPT_DEBUG=""
 
 # Certificate validation
@@ -395,7 +395,7 @@ export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 **Output logging**
 
-Output logging. Use 'verbose' to increase verbosity.
+Output logging. Use 'verbose' to increase verbosity. When set, the npm install and build commands during preparation also run with `--loglevel=silly`.
 
 ```
 export WPT_DEBUG=""
