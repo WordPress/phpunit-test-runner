@@ -94,7 +94,7 @@ To use the Runner, the following is required to test WordPress version 6.6 or la
 
 - Server / hosting (infrastructure) with the usual configuration you use
 - A database where you can test (tables will be created and destroyed several times)
-- PHP 7.2+
+- PHP 7.4+
 - MySQL 5.5.5+ / MariaDB 5.5.5+
 - NodeJS 24.x / npm 11.x / grunt (WordPress trunk requires Node.js 24.18 or later and npm 11.16 or later, and `npm install` fails on older versions)
 - PHP Composer
