@@ -77,6 +77,13 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
 
 
 /*
+ * When debug mode is enabled, run npm at its most verbose logging level, so a
+ * hung or slow npm command shows what it is doing instead of sitting silent.
+ * The same debug mode adds verbosity to the rsync operations further down.
+ */
+$npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
+
+/*
  * Checkout and prepare wordpress-develop for testing.
  *
  * The following actions are performed:
@@ -96,7 +103,7 @@ perform_operations(
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
 		// Change directory to the preparation directory, install npm dependencies, and build the project.
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build',
+		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build' . $npm_verbosity,
 
 	)
 );
