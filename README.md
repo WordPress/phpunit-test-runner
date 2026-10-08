@@ -633,6 +633,38 @@ journalctl -u testrunner.timer
 journalctl -n 120 -u testrunner.service
 ```
 
+### Docker
+
+The runner can also be run in containers, with a disposable database, using [Docker Compose](https://docs.docker.com/compose/). The image in [`docker/Dockerfile`](docker/Dockerfile) installs PHP with the extensions the test suite uses, Composer, Node.js, Git, rsync, and an SSH client, so nothing needs to be installed on the host besides Docker.
+
+```bash
+mkdir -p output
+WPT_UID=$(id -u) docker compose up --build --abort-on-container-exit --exit-code-from runner
+docker compose down --volumes
+```
+
+This runs `prepare.php`, `test.php`, `report.php`, and `cleanup.php` in order. The test and report steps are skipped when preparing the environment fails, and the cleanup step always runs. The command exits with the exit code of the first step that failed.
+
+When the run finishes, the `output/` directory contains:
+
+- `prepare.log`, `test.log`, `report.log`, and `cleanup.log`: the output of each step.
+- `junit.xml` and `env.json`: the test results and environment details.
+- `summary.md`: a Markdown summary of the steps, the test results, and any failures.
+
+The PHP and database versions are chosen with environment variables. Any variable from [`.env.default`](.env.default) that is listed in [`compose.yaml`](compose.yaml) is passed through to the runner, so setting `WPT_REPORT_API_KEY` reports the results to WordPress.org.
+
+```bash
+PHP_VERSION=8.1 WPT_DB_IMAGE=mariadb:10.6 docker compose up --build --abort-on-container-exit --exit-code-from runner
+```
+
+`PHP_VERSION` is any tag of the official [`php`](https://hub.docker.com/_/php) image. The PHP 7.x images are built on Debian releases that no longer receive updates, so the image may fail to build for them.
+
+Set `WPT_IGNORE_TEST_FAILURES=1` to exit with 0 when WordPress tests fail but every runner step worked. A test run that produces no `junit.xml` results still fails.
+
+To open a shell in the runner image instead, use `docker compose run --rm runner bash`.
+
+The [Container Tests](.github/workflows/container-tests.yml) workflow runs the same setup on every pull request. It shows the summary on the workflow run and uploads the `output/` directory as an artifact. The [Container Tests Report](.github/workflows/container-tests-report.yml) workflow then posts the summaries as a comment on the pull request, and updates that comment on later runs.
+
 ## Contributing
 
 If you have questions about the process or run into test failures along the way, please [open an issue in the project repository](https://github.com/WordPress/phpunit-test-runner/issues) and we’ll help diagnose/get the documentation updated. Alternatively, you can also pop into the `#hosting` channel on [WordPress.org Slack](https://make.wordpress.org/chat/) for help.

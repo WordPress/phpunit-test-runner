@@ -1,0 +1,53 @@
+# Runs the test runner and a disposable database in containers.
+#
+#   mkdir -p output
+#   docker compose up --build --abort-on-container-exit --exit-code-from runner
+#   docker compose down --volumes
+#
+# Results, logs, and a summary are written to ./output.
+#
+# The PHP and database versions are set with environment variables, for example:
+#
+#   PHP_VERSION=8.1 WPT_DB_IMAGE=mariadb:10.6 docker compose up --build ...
+#
+# Any WPT_* variable from .env.default can be passed through the same way.
+
+services:
+  db:
+    image: ${WPT_DB_IMAGE:-mysql:8.0}
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wordpress_test
+      MYSQL_USER: wp_test
+      MYSQL_PASSWORD: wp_test
+    # The database is destroyed after every run, so keep it in memory.
+    tmpfs:
+      - /var/lib/mysql
+
+  runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.3}
+        NODE_VERSION: ${NODE_VERSION:-24}
+        WPT_UID: ${WPT_UID:-1000}
+    depends_on:
+      - db
+    environment:
+      WPT_DB_NAME: wordpress_test
+      WPT_DB_USER: wp_test
+      WPT_DB_PASSWORD: wp_test
+      WPT_DB_HOST: db
+      WPT_DB_LABEL: ${WPT_DB_IMAGE:-mysql:8.0}
+      WPT_TABLE_PREFIX: ${WPT_TABLE_PREFIX:-wptests_}
+      WPT_REPORT_API_KEY: ${WPT_REPORT_API_KEY:-}
+      WPT_REPORT_URL: ${WPT_REPORT_URL:-}
+      WPT_FLAVOR: ${WPT_FLAVOR:-0}
+      WPT_EXTRATESTS: ${WPT_EXTRATESTS:-0}
+      WPT_PHPUNIT_CMD: ${WPT_PHPUNIT_CMD:-}
+      WPT_DEBUG: ${WPT_DEBUG:-}
+      WPT_CERTIFICATE_VALIDATION: ${WPT_CERTIFICATE_VALIDATION:-1}
+      WPT_IGNORE_TEST_FAILURES: ${WPT_IGNORE_TEST_FAILURES:-}
+    volumes:
+      - ./output:/output

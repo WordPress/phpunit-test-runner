@@ -1,0 +1,89 @@
+name: Container Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '**.php'
+      - 'compose.yaml'
+      - 'docker/**'
+      - '.dockerignore'
+      - '.github/workflows/container-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  # Builds the runner image and runs prepare.php, test.php, report.php, and
+  # cleanup.php against a database container, mimicking a hosting environment.
+  #
+  # Each step's output, junit.xml, env.json, and a Markdown summary are
+  # uploaded as an artifact, and the summary is shown on the workflow run.
+  #
+  # The job fails when a runner step fails, not when WordPress tests fail.
+  test:
+    name: PHP ${{ matrix.php }} / ${{ matrix.db }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.3'
+            db: 'mysql:8.4'
+          - php: '8.1'
+            db: 'mariadb:10.6'
+
+    env:
+      PHP_VERSION: ${{ matrix.php }}
+      WPT_DB_IMAGE: ${{ matrix.db }}
+      # Failing WordPress tests are shown in the summary, but only problems with
+      # the runner itself, or a test run without junit.xml results, fail the job.
+      WPT_IGNORE_TEST_FAILURES: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
+          persist-credentials: false
+
+      - name: Build the runner image
+        run: WPT_UID="$(id -u)" docker compose build runner
+
+      - name: Run the test runner
+        run: |
+          mkdir -p output
+          docker compose up --abort-on-container-exit --exit-code-from runner
+
+      - name: Add the summary to the job
+        if: ${{ always() }}
+        run: |
+          if [ -f output/summary.md ]; then
+            cat output/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The runner did not produce a summary." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: results-php${{ matrix.php }}-${{ strategy.job-index }}
+          path: output/
+          if-no-files-found: warn
+
+      - name: Remove the containers
+        if: ${{ always() }}
+        run: docker compose down --volumes

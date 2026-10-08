@@ -1,0 +1,141 @@
+name: Container Tests Report
+
+on:
+  # Runs after the Container Tests workflow completes, in the context of the
+  # base repository. This grants the permission to comment on pull requests
+  # opened from forks, which the `pull_request` event does not.
+  #
+  # The artifacts of the completed run were produced by pull request code and
+  # must be treated as untrusted. They are only read as text: no code from the
+  # pull request is checked out or executed here.
+  workflow_run:
+    workflows:
+      - Container Tests
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  # Posts the summaries of the Container Tests jobs as a pull request comment.
+  #
+  # Performs the following steps:
+  # - Downloads the results artifacts of the completed run.
+  # - Finds the open pull request for the run's head commit.
+  # - Creates the comment, or updates the one posted for an earlier run.
+  comment:
+    name: Comment on the pull request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      pull-requests: write
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled' }}
+
+    steps:
+      - name: Download the results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        # A run that failed before uploading anything is still reported.
+        continue-on-error: true
+        with:
+          pattern: results-*
+          path: results
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Post the summary
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          retries: 2
+          script: |
+            const fs = require( 'fs' );
+            const path = require( 'path' );
+
+            const run = context.payload.workflow_run;
+            const marker = '<!-- wpt-container-tests-report -->';
+            // GitHub rejects comments longer than 65536 characters.
+            const maxLength = 60000;
+
+            // Look the pull request up from the run itself rather than from the
+            // artifacts, so pull request code cannot redirect the comment.
+            const pulls = await github.paginate( github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            } );
+            // The head repository is null when the fork has been deleted.
+            const headRepo = run.head_repository ? run.head_repository.full_name : '';
+            const pull = pulls.find(
+              ( pr ) =>
+                pr.head.sha === run.head_sha &&
+                pr.head.repo &&
+                pr.head.repo.full_name === headRepo
+            );
+            if ( ! pull ) {
+              core.info( `No open pull request found for ${ headRepo || 'a deleted repository' }@${ run.head_sha }.` );
+              return;
+            }
+
+            const summaries = [];
+            if ( fs.existsSync( 'results' ) ) {
+              for ( const dir of fs.readdirSync( 'results' ).sort() ) {
+                const file = path.join( 'results', dir, 'summary.md' );
+                // Only read regular files from the untrusted artifacts.
+                if ( fs.existsSync( file ) && fs.lstatSync( file ).isFile() ) {
+                  summaries.push( fs.readFileSync( file, 'utf8' ).trim() );
+                }
+              }
+            }
+
+            const icons = { success: '✅', failure: '❌', timed_out: '⏱️' };
+            const icon = icons[ run.conclusion ] || 'ℹ️';
+            let body = [
+              marker,
+              `# ${ icon } Container Tests: ${ run.conclusion }`,
+              '',
+              `Results for ${ run.head_sha.substring( 0, 7 ) } from [workflow run #${ run.run_number }](${ run.html_url }). Logs, \`junit.xml\`, and \`env.json\` are attached to the run as artifacts.`,
+              '',
+              summaries.length
+                ? summaries.join( '\n\n---\n\n' )
+                : '_No results were uploaded. Check the workflow run for errors in building the image or starting the containers._',
+            ].join( '\n' );
+
+            // Keep mentions in the untrusted summaries from notifying anyone.
+            body = body.replace( /@(?=[A-Za-z0-9])/g, '@​' );
+
+            if ( body.length > maxLength ) {
+              body = body.substring( 0, maxLength ) + `\n\n_The summary was truncated. See the [workflow run](${ run.html_url }) for the full results._`;
+            }
+
+            const comments = await github.paginate( github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pull.number,
+              per_page: 100,
+            } );
+            const existing = comments.find(
+              ( comment ) =>
+                comment.user &&
+                comment.user.login === 'github-actions[bot]' &&
+                comment.body &&
+                comment.body.startsWith( marker )
+            );
+
+            if ( existing ) {
+              await github.rest.issues.updateComment( {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              } );
+              core.info( `Updated comment ${ existing.html_url }` );
+            } else {
+              const { data } = await github.rest.issues.createComment( {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pull.number,
+                body,
+              } );
+              core.info( `Created comment ${ data.html_url }` );
+            }
