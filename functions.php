@@ -70,11 +70,12 @@ function check_required_env( $check_db = true ) {
  *  }
  */
 function setup_runner_env_vars() {
-	$test_dir    = trim( getenv( 'WPT_TEST_DIR' ) );
-	$prepare_dir = trim( getenv( 'WPT_PREPARE_DIR' ) );
-	$ssh_options = trim( getenv( 'WPT_SSH_OPTIONS' ) );
-	$php_exec    = trim( getenv( 'WPT_PHP_EXECUTABLE' ) );
-	$rm_test_dir = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) );
+	$test_dir      = trim( getenv( 'WPT_TEST_DIR' ) );
+	$prepare_dir   = trim( getenv( 'WPT_PREPARE_DIR' ) );
+	$ssh_options   = trim( getenv( 'WPT_SSH_OPTIONS' ) );
+	$php_exec      = trim( getenv( 'WPT_PHP_EXECUTABLE' ) );
+	$rm_test_dir   = trim( getenv( 'WPT_RM_TEST_DIR_CMD' ) );
+	$assets_source = strtolower( trim( getenv( 'WPT_ASSETS_SOURCE' ) ) );
 
 	$runner_configuration = array(
 		'WPT_TEST_DIR' => '' !== $test_dir ? $test_dir : '/tmp/wp-test-runner',
@@ -90,6 +91,7 @@ function setup_runner_env_vars() {
 			'WPT_RM_TEST_DIR_CMD' => '' !== $rm_test_dir ? $rm_test_dir : 'rm -rf ' . escapeshellarg( $runner_configuration['WPT_TEST_DIR'] ),
 			'WPT_REPORT_API_KEY'  => trim( getenv( 'WPT_REPORT_API_KEY' ) ),
 			'WPT_DEBUG'           => (bool) getenv( 'WPT_DEBUG' ),
+			'WPT_ASSETS_SOURCE'   => '' !== $assets_source ? $assets_source : 'npm',
 		)
 	);
 }
@@ -566,6 +568,188 @@ function wpt_runner_get_db_server_version( $db_host, $db_user, $db_password, $db
 }
 
 // phpcs:enable WordPress.DB.RestrictedFunctions
+
+/**
+ * Reads the Subversion revision of a wordpress-develop checkout from its last commit message.
+ *
+ * The git mirror of wordpress-develop ends every commit message with a line such as
+ * `git-svn-id: https://develop.svn.wordpress.org/trunk@64232 ...`, also in a shallow clone.
+ *
+ * @param string $checkout_dir Path to the wordpress-develop checkout.
+ * @return array|null Array with 'path' (trunk or branches/x.y) and 'revision' (int), or null when unknown.
+ */
+function wpt_runner_get_checkout_revision( $checkout_dir ) {
+	$output = array();
+	$retval = 0;
+	exec( 'git -C ' . escapeshellarg( $checkout_dir ) . ' log -1 --format=%B 2>/dev/null', $output, $retval );
+
+	if ( 0 !== $retval ) {
+		return null;
+	}
+
+	if ( ! preg_match( '#git-svn-id: https://develop\.svn\.wordpress\.org/(trunk|branches/[0-9.]+)@([0-9]+)#', implode( "\n", $output ), $matches ) ) {
+		return null;
+	}
+
+	return array(
+		'path'     => $matches[1],
+		'revision' => (int) $matches[2],
+	);
+}
+
+/**
+ * Finds the commit of the WordPress/WordPress built mirror that was built from a develop revision.
+ *
+ * Every mirror commit message carries a line such as `Built from https://develop.svn.wordpress.org/trunk@64232`.
+ * Trunk is mirrored on `master`, a branch such as `branches/7.1` on `7.1-branch`. The lookup reads the latest
+ * 100 commits of that mirror branch through the GitHub API, unauthenticated.
+ *
+ * @param string $svn_path Subversion path of the checkout: `trunk` or `branches/x.y`.
+ * @param int    $revision Subversion revision of the checkout.
+ * @return string|null Commit SHA on the mirror, or null when no commit for that revision is among the latest 100.
+ */
+function wpt_runner_find_mirror_commit( $svn_path, $revision ) {
+	$ref = 'trunk' === $svn_path ? 'master' : substr( $svn_path, strlen( 'branches/' ) ) . '-branch';
+	$url = 'https://api.github.com/repos/WordPress/WordPress/commits?sha=' . rawurlencode( $ref ) . '&per_page=100';
+
+	$process = curl_init( $url );
+	curl_setopt_array(
+		$process,
+		array(
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_TIMEOUT        => 30,
+			CURLOPT_HTTPHEADER     => array(
+				'Accept: application/vnd.github+json',
+				'User-Agent: WordPress-phpunit-test-runner',
+			),
+		)
+	);
+	$body   = curl_exec( $process );
+	$status = (int) curl_getinfo( $process, CURLINFO_HTTP_CODE );
+
+	if ( ! is_string( $body ) || 200 !== $status ) {
+		log_message( 'Built assets: the GitHub API answered ' . $status . ' for the mirror commit list.' );
+		return null;
+	}
+
+	$commits = json_decode( $body, true );
+
+	if ( ! is_array( $commits ) ) {
+		return null;
+	}
+
+	$needle = '#' . preg_quote( 'Built from https://develop.svn.wordpress.org/' . $svn_path . '@' . $revision, '#' ) . '(?![0-9])#';
+
+	foreach ( $commits as $commit ) {
+		if ( ! isset( $commit['sha'], $commit['commit']['message'] ) ) {
+			continue;
+		}
+
+		if ( preg_match( $needle, (string) $commit['commit']['message'] ) && preg_match( '/^[0-9a-f]{40}$/', (string) $commit['sha'] ) ) {
+			return (string) $commit['sha'];
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Installs the built files of a wordpress-develop checkout from the WordPress/WordPress mirror.
+ *
+ * The mirror is built from every develop revision, so its tree for the checked-out revision holds the same
+ * generated files that `npm run build:dev` would write into `src/`: scripts, styles, the block assets, the
+ * jQuery copies, the minified bundled-theme styles and so on. Only files that the checkout ignores are copied
+ * (`git check-ignore`), so tracked files stay exactly as checked out. The caller runs the npm build when this
+ * returns false; files copied before a failure are simply overwritten by that build.
+ *
+ * @param string $checkout_dir Path to the wordpress-develop checkout.
+ * @param bool   $verbose      Whether to let wget and rsync print their progress.
+ * @return bool Whether the files were installed and the sentinel files are in place.
+ */
+function wpt_runner_install_built_assets_from_mirror( $checkout_dir, $verbose = false ) {
+	$revision = wpt_runner_get_checkout_revision( $checkout_dir );
+
+	if ( null === $revision ) {
+		log_message( 'Built assets: could not read the Subversion revision of the checkout.' );
+		return false;
+	}
+
+	log_message( 'Built assets: the checkout is ' . $revision['path'] . '@' . $revision['revision'] . ', looking for its built mirror commit.' );
+
+	$sha = wpt_runner_find_mirror_commit( $revision['path'], $revision['revision'] );
+
+	if ( null === $sha ) {
+		log_message( 'Built assets: no usable mirror commit for that revision (not built yet, or the lookup failed).' );
+		return false;
+	}
+
+	log_message( 'Built assets: mirror commit ' . $sha . '.' );
+
+	// Unique per process: concurrent runs may prepare the same revision.
+	$work_dir = rtrim( sys_get_temp_dir(), '/' ) . '/wpt-built-assets-' . substr( $sha, 0, 12 ) . '-' . getmypid() . '-' . bin2hex( random_bytes( 4 ) );
+	$tarball  = $work_dir . '/mirror.tar.gz';
+	$tree     = $work_dir . '/tree';
+	$list     = $work_dir . '/files.txt';
+	$cleanup  = 'rm -rf ' . escapeshellarg( $work_dir );
+
+	$steps = array(
+		'mkdir -p ' . escapeshellarg( $tree ),
+		'wget' . ( $verbose ? '' : ' -q' ) . ' -O ' . escapeshellarg( $tarball ) . ' ' . escapeshellarg( 'https://github.com/WordPress/WordPress/archive/' . $sha . '.tar.gz' ),
+		'tar -xzf ' . escapeshellarg( $tarball ) . ' -C ' . escapeshellarg( $tree ) . ' --strip-components=1',
+		// Only the files the checkout ignores under src/ are build products; the rest is checked out already.
+		'cd ' . escapeshellarg( $tree ) . ' && find wp-admin wp-includes wp-content/themes -type f | sed \'s|^|src/|\' | git -C ' . escapeshellarg( $checkout_dir ) . ' check-ignore --stdin | sed \'s|^src/||\' > ' . escapeshellarg( $list ),
+	);
+
+	foreach ( $steps as $step ) {
+		log_message( $step );
+		passthru( $step, $retval );
+
+		if ( 0 !== $retval ) {
+			log_message( 'Built assets: the step above failed with exit code ' . $retval . '.' );
+			passthru( $cleanup );
+			return false;
+		}
+	}
+
+	$files = is_file( $list ) ? array_filter( file( $list, FILE_IGNORE_NEW_LINES ) ) : array();
+
+	if ( array() === $files ) {
+		log_message( 'Built assets: the mirror tree holds no file that the checkout ignores.' );
+		passthru( $cleanup );
+		return false;
+	}
+
+	$copy = 'rsync -a' . ( $verbose ? 'v' : '' ) . ' --files-from=' . escapeshellarg( $list ) . ' ' . escapeshellarg( $tree . '/' ) . ' ' . escapeshellarg( rtrim( $checkout_dir, '/' ) . '/src/' );
+	log_message( $copy );
+	passthru( $copy, $retval );
+
+	if ( 0 !== $retval ) {
+		log_message( 'Built assets: rsync failed with exit code ' . $retval . '.' );
+		passthru( $cleanup );
+		return false;
+	}
+
+	passthru( $cleanup );
+
+	// A few files every build writes; their absence means the mirror tree is not what the tests need.
+	$sentinels = array(
+		'wp-includes/js/jquery/jquery.js',
+		'wp-includes/js/dist/blocks.js',
+		'wp-includes/css/dist/block-library/style.css',
+		'wp-admin/js/common.js',
+	);
+
+	foreach ( $sentinels as $sentinel ) {
+		if ( ! is_file( rtrim( $checkout_dir, '/' ) . '/src/' . $sentinel ) ) {
+			log_message( 'Built assets: ' . $sentinel . ' is missing after the copy.' );
+			return false;
+		}
+	}
+
+	log_message( 'Built assets: ' . count( $files ) . ' files installed into src/ from mirror commit ' . substr( $sha, 0, 12 ) . '.' );
+
+	return true;
+}
 
 /**
  * Collects details about the testing environment.
