@@ -119,6 +119,22 @@ log_message( 'Replacing variables in wp-tests-config.php' );
 $contents = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config-sample.php' );
 
 /*
+ * Give the generated config its own random salts instead of the sample's
+ * placeholder phrases. WordPress treats the placeholder as undefined and
+ * generates salts in the database on first use, so this is not a security
+ * fix. It makes the generated config follow its own instructions and saves
+ * the test install from priming salt options. Each placeholder gets a fresh
+ * value, and hex keeps the value safe inside the single quotes.
+ */
+$contents = preg_replace_callback(
+	"/'put your unique phrase here'/",
+	function () {
+		return "'" . bin2hex( random_bytes( 32 ) ) . "'";
+	},
+	$contents
+);
+
+/*
  * Prepare a script for logging system information.
  *
  * The versions of PHP, PHP modules, database software, and system utilities
