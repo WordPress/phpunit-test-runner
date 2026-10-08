@@ -100,6 +100,8 @@ To use the Runner, the following is required to test WordPress version 6.6 or la
 - PHP Composer
 - Git, RSync, WGet, UnZip
 
+With `WPT_ASSETS_SOURCE=mirror` (see [Configuring the Runner](#configuring-the-runner)) the built files are downloaded from the WordPress/WordPress mirror for the exact checked-out revision, and npm is not run when that succeeds. Keep NodeJS and npm installed anyway: the Runner falls back to the npm build when the mirror has no commit for the revision yet or the download fails.
+
 A full list of compatible versions of PHP for each version of WordPress [can be found in the WordPress Core Handbook](https://make.wordpress.org/core/handbook/references/php-compatibility-and-wordpress-versions/).
 
 Test environment:
@@ -243,6 +245,12 @@ export WPT_SSH_PRIVATE_KEY_BASE64=""
 # Output logging
 # Use 'verbose' to increase verbosity; also runs npm with --loglevel=silly
 export WPT_DEBUG=""
+
+# Where the built files for the tests come from
+# "npm" (default) runs npm install and npm run build:dev in the checkout
+# "mirror" downloads them from WordPress/WordPress for the checked-out revision
+# and runs npm only as a fallback (revision not mirrored yet, download failed)
+export WPT_ASSETS_SOURCE="npm"
 
 # Certificate validation
 # Use 1 to validate, and 0 to not validate
@@ -399,6 +407,14 @@ Output logging. Use 'verbose' to increase verbosity. When set, the npm install a
 
 ```
 export WPT_DEBUG=""
+```
+
+**Built files source**
+
+The test suite runs against `src/` of the wordpress-develop checkout, which needs the generated scripts, styles and block assets. By default they are built with `npm install` and `npm run build:dev`. With `mirror`, the Runner reads the checked-out revision from the clone, finds the commit of the [WordPress/WordPress](https://github.com/WordPress/WordPress) mirror that was built from that revision (every mirror commit names it, about a minute behind develop), downloads that tree (about 60 MB) and copies the files the checkout ignores into `src/`, so Node.js and npm are not used on that path. When no mirror commit exists for the revision yet, or the download does not hold the expected files, the npm build runs instead, so Node.js and npm still need to be installed. The lookup uses the public GitHub API without authentication.
+
+```
+export WPT_ASSETS_SOURCE="npm"
 ```
 
 **Certificate validation**
