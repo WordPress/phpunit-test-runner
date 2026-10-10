@@ -11,7 +11,9 @@
 #
 # Example cron entry (every 4 hours). Replace /path/to/phpunit-test-runner with
 # the directory of your clone. The script finds the runner from its own location,
-# so it does not need to be started from that directory:
+# so it does not need to be started from that directory. Cron starts with a short
+# PATH, so set one that finds npm and composer:
+#   PATH=/usr/local/bin:/usr/bin:/bin
 #   0 */4 * * * /path/to/phpunit-test-runner/host-tools/testrunner.sh >> /path/to/testrunner.log 2>&1
 #
 # Optional environment variables:
@@ -19,7 +21,9 @@
 #   WPT_SKIP_UPDATE  Set to 1 to skip "git pull" (for example, when you test local changes).
 #
 # The PHP binary comes from WPT_PHP_EXECUTABLE in .env (default: php), the
-# same setting that the runner uses to run the tests.
+# same setting that the runner uses to run the tests. With WPT_SSH_CONNECT set,
+# WPT_PHP_EXECUTABLE is the PHP on the remote test host, so the runner steps run
+# with the local php.
 #
 # Exit status: 0 when every step succeeds, 1 when any step fails.
 
@@ -34,9 +38,10 @@ if [[ ! -f .env ]]; then
 	exit 1
 fi
 
-# Stop when another run is still active, for example a slow run that cron starts again.
+# Stop when another run of this checkout is still active, for example a slow run
+# that cron starts again. Other checkouts on the same host can run at the same time.
 if command -v flock >/dev/null 2>&1; then
-	exec 9>"${TMPDIR:-/tmp}/wpt-testrunner-$(id -u).lock"
+	exec 9>"${TMPDIR:-/tmp}/wpt-testrunner-$(id -u)-$(pwd -P | cksum | cut -d' ' -f1).lock"
 	if ! flock -n 9; then
 		echo "Another test run is still active. Stopping." >&2
 		exit 1
@@ -47,10 +52,19 @@ if [[ "${WPT_SKIP_UPDATE:-0}" != "1" ]]; then
 	git pull --ff-only origin master || echo "Warning: could not update the runner. Continuing with the current version." >&2
 fi
 
+# A .env line may use a variable that is not set. The runner allows that.
+set +u
 # shellcheck source=/dev/null
 source .env
+set -u
 
-read -r -a PHP <<< "${WPT_PHP_EXECUTABLE:-php}"
+# With WPT_SSH_CONNECT set, WPT_PHP_EXECUTABLE is the PHP on the remote test
+# host, so the runner itself runs with the local php, as in the README.
+if [[ -n "${WPT_SSH_CONNECT:-}" ]]; then
+	PHP=( php )
+else
+	read -r -a PHP <<< "${WPT_PHP_EXECUTABLE:-php}"
+fi
 
 status=0
 
