@@ -168,6 +168,7 @@ elif [[ $CHECK_DB -eq 1 ]]; then
 	echo
 	echo "Testing the database connection..."
 	read -r -a PHP <<< "$WPT_PHP_EXECUTABLE"
+	# shellcheck disable=SC2016 # The single-quoted argument is PHP code, not shell.
 	if ! WPT_RUNNER_FUNCTIONS="$RUNNER_DIR/functions.php" WPT_DB_NAME="$WPT_DB_NAME" WPT_DB_USER="$WPT_DB_USER" WPT_DB_PASSWORD="${WPT_DB_PASSWORD:-}" WPT_DB_HOST="$WPT_DB_HOST" \
 		"${PHP[@]}" -r '
 			require getenv( "WPT_RUNNER_FUNCTIONS" );
