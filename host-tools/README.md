@@ -48,8 +48,11 @@ The scripts do not install software, create the database, or set up cron.
 4. Run the tests on a schedule. For example, a cron entry for every 4 hours. Replace `/path/to/phpunit-test-runner` with the directory of your clone:
 
    ```
+   PATH=/usr/local/bin:/usr/bin:/bin
    0 */4 * * * /path/to/phpunit-test-runner/host-tools/testrunner.sh >> /path/to/testrunner.log 2>&1
    ```
+
+   Cron starts with a short `PATH`, and `prepare.php` calls `npm` and `composer`. Set a `PATH` that finds them.
 
    The script finds the runner from its own location, so cron does not need to change to that directory first.
 
@@ -68,8 +71,9 @@ To report results to the [Host Test Results](https://make.wordpress.org/hosting/
 | `--skip-db-check` | Do not test the database connection. |
 
 - Values come from the environment first, then from the current `.env`, then from the defaults.
-- The script sets `WPT_TEST_DIR` to the same directory as `WPT_PREPARE_DIR`, which a run on the same server requires.
-- It saves the old `.env` as `.env.bak-<date>` and makes the new `.env` readable only by its owner.
+- For a run on this server, the script sets `WPT_TEST_DIR` to the same directory as `WPT_PREPARE_DIR`, which the runner requires. With `WPT_SSH_CONNECT` set, it keeps `WPT_TEST_DIR`, the directory on the remote server.
+- Settings that the script does not ask about, like the SSH settings, stay as they are in the current `.env`.
+- It saves the old `.env` as `.env.bak-<date>`. The new `.env` and the backup are readable only by their owner.
 
 Example for a provisioning tool:
 
@@ -86,9 +90,9 @@ WPT_REPORT_API_KEY='botuser:application password' \
 ```
 
 1. Stops if `.env` does not exist.
-2. Stops if another run is still active. This uses `flock`, which most Linux systems have. Without `flock`, the script does not check for other runs.
+2. Stops if another run of the same checkout is still active. This uses `flock`, which most Linux systems have. Without `flock`, the script does not check for other runs.
 3. Updates the runner with `git pull --ff-only origin master`. If the update fails, the script shows a warning and continues.
-4. Runs `prepare.php`, `test.php`, `report.php` and `cleanup.php` with the PHP executable from `WPT_PHP_EXECUTABLE`.
+4. Runs `prepare.php`, `test.php`, `report.php` and `cleanup.php` with the PHP executable from `WPT_PHP_EXECUTABLE`. With `WPT_SSH_CONNECT` set, `WPT_PHP_EXECUTABLE` is the PHP on the remote server, so these run with the local `php`.
 
 Behavior when a step fails:
 
