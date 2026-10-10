@@ -573,6 +573,12 @@ Some suggestions:
 
 ### Script en Bash
 
+The runner includes a ready-made script for this: [`host-tools/testrunner.sh`](host-tools/testrunner.sh). It updates the runner and runs the 4 steps. It also runs the report when a test fails, always cleans up, and stops when another run is still active. Replace `/path/to/phpunit-test-runner` with the directory of your clone, and use it in place of the example below:
+
+```bash
+bash /path/to/phpunit-test-runner/host-tools/testrunner.sh
+```
+
 This is a simple example of a Bash script that could be placed in the directory above the software. For example, at `/home/wptestrunner/`.
 
 ```bash
