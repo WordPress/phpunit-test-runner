@@ -11,7 +11,8 @@
 #
 # The script asks for each value. Press Enter to keep the value in brackets.
 # Values come from the environment first, then from the current .env (if it
-# exists), then from built-in defaults.
+# exists), then from built-in defaults. Running the script again keeps the
+# settings that it does not ask about, such as the SSH settings.
 #
 # Options:
 #   --non-interactive  Do not ask. Use values from the environment and the current .env.
@@ -80,7 +81,8 @@ fi
 
 # --- Current values ---------------------------------------------------------
 
-# The variables that this script sets. All other lines of .env.default are kept.
+# The variables that this script sets. All other lines of the current .env
+# (or of .env.default, the first time) are kept.
 VARS=(WPT_PREPARE_DIR WPT_TEST_DIR WPT_DB_NAME WPT_DB_USER WPT_DB_PASSWORD WPT_DB_HOST WPT_REPORT_API_KEY WPT_PHP_EXECUTABLE)
 
 # Values from the environment win over the current .env.
@@ -90,8 +92,11 @@ for var in "${VARS[@]}"; do
 	fi
 done
 if [[ -f "$ENV_FILE" ]]; then
+	# A .env line may use a variable that is not set. The runner allows that.
+	set +u
 	# shellcheck source=/dev/null
 	source "$ENV_FILE"
+	set -u
 fi
 for var in "${VARS[@]}"; do
 	env_name="ENV_$var"
@@ -135,10 +140,16 @@ if [[ $INTERACTIVE -eq 1 ]]; then
 	ask WPT_DB_HOST "Database host (host, host:port or localhost:/path/to/socket)"
 	ask WPT_PHP_EXECUTABLE "PHP executable"
 	ask WPT_PREPARE_DIR "Directory for the WordPress checkout"
-	WPT_TEST_DIR="$WPT_PREPARE_DIR"
 	echo "To report results to make.wordpress.org, enter the bot user and application password as user:password."
 	echo "Leave it empty to run the tests without reporting."
 	ask WPT_REPORT_API_KEY "Report API key" secret
+fi
+
+# A run on this server needs WPT_TEST_DIR to be the same as WPT_PREPARE_DIR
+# (check_required_env() in functions.php). With WPT_SSH_CONNECT set,
+# WPT_TEST_DIR is the directory on the remote server, so it is kept.
+if [[ -z "${WPT_SSH_CONNECT:-}" ]]; then
+	WPT_TEST_DIR="$WPT_PREPARE_DIR"
 fi
 
 for var in WPT_DB_NAME WPT_DB_USER WPT_DB_HOST; do
@@ -150,7 +161,10 @@ done
 
 # --- Database connection ----------------------------------------------------
 
-if [[ $CHECK_DB -eq 1 ]]; then
+if [[ $CHECK_DB -eq 1 && -n "${WPT_SSH_CONNECT:-}" ]]; then
+	echo
+	echo "WPT_SSH_CONNECT is set, so the tests connect to the database from $WPT_SSH_CONNECT. Skipping the database check."
+elif [[ $CHECK_DB -eq 1 ]]; then
 	echo
 	echo "Testing the database connection..."
 	read -r -a PHP <<< "$WPT_PHP_EXECUTABLE"
@@ -185,6 +199,7 @@ fi
 if [[ -f "$ENV_FILE" ]]; then
 	backup="$ENV_FILE.bak-$(date +%Y%m%d%H%M%S)"
 	cp -p "$ENV_FILE" "$backup"
+	chmod 600 "$backup"
 	echo "Saved the old .env as $backup"
 fi
 
@@ -193,13 +208,22 @@ shell_quote() {
 	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
 }
 
+# Start from the current .env, so the settings that this script does not ask
+# about (SSH, report URL, debug, and so on) are kept.
+template="$ENV_DEFAULT"
+if [[ -f "$ENV_FILE" ]]; then
+	template="$ENV_FILE"
+fi
+
 tmp="$(mktemp "$RUNNER_DIR/.env.XXXXXX")"
 chmod 600 "$tmp"
+written=" "
 while IFS= read -r line || [[ -n "$line" ]]; do
 	replaced=0
 	for var in "${VARS[@]}"; do
 		if [[ "$line" == "export $var="* ]]; then
 			printf 'export %s=%s\n' "$var" "$(shell_quote "${!var:-}")"
+			written="$written$var "
 			replaced=1
 			break
 		fi
@@ -207,7 +231,13 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 	if [[ $replaced -eq 0 ]]; then
 		printf '%s\n' "$line"
 	fi
-done < "$ENV_DEFAULT" > "$tmp"
+done < "$template" > "$tmp"
+# Add the variables that the current .env does not have yet.
+for var in "${VARS[@]}"; do
+	if [[ "$written" != *" $var "* ]]; then
+		printf 'export %s=%s\n' "$var" "$(shell_quote "${!var:-}")" >> "$tmp"
+	fi
+done
 mv "$tmp" "$ENV_FILE"
 
 echo "Saved $ENV_FILE (readable only by you)."
