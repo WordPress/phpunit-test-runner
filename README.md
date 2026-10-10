@@ -130,6 +130,31 @@ nodejs --version
 npm --version
 ```
 
+### Why Node.js is needed
+
+The PHPUnit test suite itself is written in PHP, but Node.js is required to prepare the WordPress source code before the tests can run.
+
+The test runner uses `prepare.php` to set up a WordPress checkout and prepare it for PHPUnit. As part of this process, it runs the WordPress build tasks (`npm install && npm run build:dev`), including the Gutenberg build step (`build:gutenberg` in the [Gruntfile](https://github.com/WordPress/wordpress-develop/blob/trunk/Gruntfile.js)). This is necessary because some files used by WordPress Core are generated or assembled as part of the build process rather than being available directly in the `wordpress-develop` checkout. These files were removed from version control in [changeset 61438](https://core.trac.wordpress.org/changeset/61438).
+
+The Gutenberg build step:
+
+1. Uses the Gutenberg version pinned by WordPress Core (`gutenberg.sha` in `package.json`).
+2. Downloads the corresponding pre-built Gutenberg artifact from GitHub Container Registry (`ghcr.io`). The download redirects to `pkg-containers.githubusercontent.com`, so the server must be able to connect to both domains.
+3. Copies the required Gutenberg files into the WordPress `src/` directory.
+4. Makes those files available to the WordPress installation that PHPUnit loads during the test run.
+
+The PHPUnit test suite loads WordPress from the `src/` directory. Therefore, these build steps must complete successfully before the tests can run. If the Gutenberg files have not been prepared, the test suite can fail while loading WordPress because required files are missing, as happened with `src/wp-includes/build/routes.php` in [#292](https://github.com/WordPress/phpunit-test-runner/issues/292).
+
+This is why Node.js and npm are requirements for the test runner even though the tests themselves are written in PHP.
+
+#### Versions
+
+The Node.js and npm versions must be compatible with the versions specified in the `engines` and `devEngines` fields of `wordpress-develop/package.json`. Because of these fields and the repository's `engine-strict` npm setting, using an unsupported Node.js or npm version causes `npm install` to fail, for example with `npm error code EBADDEVENGINES`.
+
+#### Development build
+
+`prepare.php` runs the development build (`npm run build:dev`), the same build that WordPress Core's own PHPUnit workflow runs. It writes the built files into `src/`, which the tests load, and skips the production work that PHPUnit does not need: the `build/` directory and the JavaScript and CSS minification. [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
+
 ### PHP Composer
 
 _This is a simple example for Debian / Ubuntu._
