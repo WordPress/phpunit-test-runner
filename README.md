@@ -134,7 +134,7 @@ npm --version
 
 The PHPUnit test suite itself is written in PHP, but Node.js is required to prepare the WordPress source code before the tests can run.
 
-The test runner uses `prepare.php` to set up a WordPress checkout and prepare it for PHPUnit. As part of this process, it runs the WordPress build tasks (`npm install && npm run build`), including the Gutenberg build step (`build:gutenberg` in the [Gruntfile](https://github.com/WordPress/wordpress-develop/blob/trunk/Gruntfile.js)). This is necessary because some files used by WordPress Core are generated or assembled as part of the build process rather than being available directly in the `wordpress-develop` checkout. These files were removed from version control in [changeset 61438](https://core.trac.wordpress.org/changeset/61438).
+The test runner uses `prepare.php` to set up a WordPress checkout and prepare it for PHPUnit. As part of this process, it runs the WordPress build tasks (`npm install && npm run build:dev`), including the Gutenberg build step (`build:gutenberg` in the [Gruntfile](https://github.com/WordPress/wordpress-develop/blob/trunk/Gruntfile.js)). This is necessary because some files used by WordPress Core are generated or assembled as part of the build process rather than being available directly in the `wordpress-develop` checkout. These files were removed from version control in [changeset 61438](https://core.trac.wordpress.org/changeset/61438).
 
 The Gutenberg build step:
 
@@ -151,9 +151,9 @@ This is why Node.js and npm are requirements for the test runner even though the
 
 The Node.js and npm versions must be compatible with the versions specified in the `engines` and `devEngines` fields of `wordpress-develop/package.json`. Because of these fields and the repository's `engine-strict` npm setting, using an unsupported Node.js or npm version causes `npm install` to fail, for example with `npm error code EBADDEVENGINES`.
 
-#### Extra work
+#### Development build
 
-`npm run build` performs more work than is required by PHPUnit. The complete WordPress build also creates the production `build/` directory and performs tasks such as JavaScript and CSS minification. The PHPUnit tests primarily need the files prepared in `src/`. The additional build work is currently part of the preparation process. WordPress Core's own PHPUnit workflow runs `npm ci` and `npm run build:dev` instead, and [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
+`prepare.php` runs the development build (`npm run build:dev`), the same build that WordPress Core's own PHPUnit workflow runs. It writes the built files into `src/`, which the tests load, and skips the production work that PHPUnit does not need: the `build/` directory and the JavaScript and CSS minification. [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
 
 ### PHP Composer
 
