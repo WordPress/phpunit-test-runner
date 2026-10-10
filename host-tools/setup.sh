@@ -48,6 +48,18 @@ if [[ ! -f "$ENV_DEFAULT" ]]; then
 	exit 1
 fi
 
+# Stop before asking anything when .env cannot be saved safely. A .env this user
+# cannot read, as after a first run with sudo, would be replaced without a
+# backup, and a runner directory it cannot write to would be reported as saved.
+if [[ -f "$ENV_FILE" && ! -r "$ENV_FILE" ]]; then
+	echo "Error: $ENV_FILE cannot be read. Fix its owner or mode, then run this script again." >&2
+	exit 1
+fi
+if [[ ! -w "$RUNNER_DIR" ]]; then
+	echo "Error: $RUNNER_DIR is not writable, so .env cannot be saved." >&2
+	exit 1
+fi
+
 if [[ $EUID -eq 0 ]]; then
 	echo "Warning: you are root. Run the tests as a non-root user (see the Requirements section in the README)." >&2
 fi
