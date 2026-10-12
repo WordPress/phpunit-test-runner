@@ -389,27 +389,35 @@ if ( false === strpos( $contents, $logger_replace_string ) ) {
 $system_logger = $logger_replace_string . $system_logger;
 
 // Define a string that will set the 'WP_PHP_BINARY' constant to the path of the PHP executable.
-$php_binary_string = 'define( \'WP_PHP_BINARY\', \'' . $runner_vars['WPT_PHP_EXECUTABLE'] . '\' );';
+$php_binary_string = 'define( \'WP_PHP_BINARY\', \'' . addcslashes( $runner_vars['WPT_PHP_EXECUTABLE'], "\\'" ) . '\' );';
 
 /*
  * Map configuration file placeholders to environment-specific values.
  *
- * This is used in the subsequent str_replace operation to replace placeholder
- * values in the wp-tests-config-sample.php file with the ones provided.
+ * The values are written into single-quoted PHP strings, so their backslashes
+ * and single quotes are escaped, as WordPress does when it writes wp-config.php
+ * in wp-admin/setup-config.php. Without that, a database password containing a
+ * single quote, or ending with a backslash, makes wp-tests-config.php a parse
+ * error, and a double backslash is silently turned into one.
  */
 $wpt_table_prefix = trim( getenv( 'WPT_TABLE_PREFIX' ) );
 $search_replace   = array(
-	'wptests_'                              => '' !== $wpt_table_prefix ? $wpt_table_prefix : 'wptests_',
-	'youremptytestdbnamehere'               => trim( getenv( 'WPT_DB_NAME' ) ),
-	'yourusernamehere'                      => trim( getenv( 'WPT_DB_USER' ) ),
-	'yourpasswordhere'                      => trim( getenv( 'WPT_DB_PASSWORD' ) ),
-	'localhost'                             => trim( getenv( 'WPT_DB_HOST' ) ),
+	'wptests_'                              => addcslashes( '' !== $wpt_table_prefix ? $wpt_table_prefix : 'wptests_', "\\'" ),
+	'youremptytestdbnamehere'               => addcslashes( trim( getenv( 'WPT_DB_NAME' ) ), "\\'" ),
+	'yourusernamehere'                      => addcslashes( trim( getenv( 'WPT_DB_USER' ) ), "\\'" ),
+	'yourpasswordhere'                      => addcslashes( trim( getenv( 'WPT_DB_PASSWORD' ) ), "\\'" ),
+	'localhost'                             => addcslashes( trim( getenv( 'WPT_DB_HOST' ) ), "\\'" ),
 	'define( \'WP_PHP_BINARY\', \'php\' );' => $php_binary_string,
 	$logger_replace_string                  => $system_logger,
 );
 
-// Replace the placeholders in the wp-tests-config-sample.php file content with actual values.
-$contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
+/*
+ * Replace the placeholders in a single pass. str_replace() runs each pair over
+ * the result of the previous ones, so a value that contains a later placeholder,
+ * such as a password containing "localhost", would be rewritten. strtr() never
+ * revisits replaced text.
+ */
+$contents = strtr( $contents, $search_replace );
 
 // Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
 file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $contents );

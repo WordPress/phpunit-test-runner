@@ -53,7 +53,9 @@ jobs:
       WPT_TEST_DIR: /tmp/wp-test-runner
       WPT_DB_NAME: wordpress_test
       WPT_DB_USER: wp_test
-      WPT_DB_PASSWORD: wp_test
+      # A quote, a backslash and a placeholder name, so the run proves that
+      # prepare.php writes the password into wp-tests-config.php as given.
+      WPT_DB_PASSWORD: 'wp''te\st-localhost'
       WPT_DB_HOST: 127.0.0.1
       WPT_REPORT_API_KEY: ''
 
@@ -63,6 +65,17 @@ jobs:
         with:
           show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
           persist-credentials: false
+
+      # The mysql image writes MYSQL_PASSWORD into SQL without escaping it, so
+      # the password above is set here instead.
+      - name: Set the database password
+        env:
+          MYSQL_PWD: root
+        run: |
+          mysql -h 127.0.0.1 -u root <<'SQL'
+          SET SESSION sql_mode = 'NO_BACKSLASH_ESCAPES';
+          ALTER USER 'wp_test'@'%' IDENTIFIED BY 'wp''te\st-localhost';
+          SQL
 
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
@@ -78,6 +91,10 @@ jobs:
       - name: Prepare environment
         run: php prepare.php
 
+      - name: Check the database password in wp-tests-config.php
+        run: |
+          php -r 'require getenv( "WPT_PREPARE_DIR" ) . "/wp-tests-config.php"; exit( DB_PASSWORD === getenv( "WPT_DB_PASSWORD" ) ? 0 : 1 );'
+
       - name: Run unit tests
         run: php test.php
         continue-on-error: true
@@ -91,7 +108,7 @@ jobs:
 
       - name: Verify database cleanup
         env:
-          MYSQL_PWD: wp_test
+          MYSQL_PWD: ${{ env.WPT_DB_PASSWORD }}
         run: |
           TABLES=$(mysql -h 127.0.0.1 -u wp_test wordpress_test -N -e "SHOW TABLES LIKE 'wptests\_%'")
           if [ -n "$TABLES" ]; then
