@@ -253,7 +253,7 @@ $contents = str_replace( array_keys( $search_replace ), array_values( $search_re
  * correct after the config is copied to a remote test environment, and the
  * directory is removed together with the test directory during cleanup.
  */
-$contents .= <<<'WPT_TEMP_DIR_CONFIG'
+$contents .= <<<'EOT'
 
 if ( ! defined( 'WP_TEMP_DIR' ) ) {
 	define( 'WP_TEMP_DIR', __DIR__ . '/wp-temp/' );
@@ -268,7 +268,7 @@ if ( ! is_dir( WP_TEMP_DIR ) || ! is_writable( WP_TEMP_DIR ) ) {
 	exit( 1 );
 }
 
-WPT_TEMP_DIR_CONFIG;
+EOT;
 
 // Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
 file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $contents );
