@@ -77,12 +77,19 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
 
 
 /*
+ * When debug mode is enabled, run npm at its most verbose logging level, so a
+ * hung or slow npm command shows what it is doing instead of sitting silent.
+ * The same debug mode adds verbosity to the rsync operations further down.
+ */
+$npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
+
+/*
  * Checkout and prepare wordpress-develop for testing.
  *
  * The following actions are performed:
  * - Creates a directory to prepare wordpress-develop.
  * - Clones the WordPress/wordpress-develop repository from GitHub.
- * - Install npm dependencies and run the build script.
+ * - Install npm dependencies and run the development build script.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations(
@@ -95,8 +102,12 @@ perform_operations(
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
-		// Change directory to the preparation directory, install npm dependencies, and build the project.
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build',
+		/*
+		 * Change directory to the preparation directory, install npm dependencies, and build the project.
+		 * The development build writes the built files into `src/`, which is the directory the test suite
+		 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
+		 */
+		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build:dev' . $npm_verbosity,
 
 	)
 );
@@ -399,6 +410,34 @@ $search_replace   = array(
 
 // Replace the placeholders in the wp-tests-config-sample.php file content with actual values.
 $contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
+
+/*
+ * Point the test suite's temporary directory inside the test directory, so
+ * concurrent runs with their own WPT_TEST_DIR do not share the system temp
+ * directory. Core's get_temp_dir() checks the WP_TEMP_DIR constant first,
+ * and several tests write fixed file names into that directory, so two runs
+ * sharing it can delete or overwrite each other's files mid test.
+ *
+ * The path is anchored to the config file's own location, so it stays
+ * correct after the config is copied to a remote test environment, and the
+ * directory is removed together with the test directory during cleanup.
+ */
+$contents .= <<<'EOT'
+
+if ( ! defined( 'WP_TEMP_DIR' ) ) {
+	define( 'WP_TEMP_DIR', __DIR__ . '/wp-temp/' );
+}
+
+if ( ! is_dir( WP_TEMP_DIR ) ) {
+	mkdir( WP_TEMP_DIR, 0777, true );
+}
+
+if ( ! is_dir( WP_TEMP_DIR ) || ! is_writable( WP_TEMP_DIR ) ) {
+	echo 'The temporary directory ' . WP_TEMP_DIR . ' could not be created or is not writable. Fix the permissions on the test directory and run again.' . PHP_EOL;
+	exit( 1 );
+}
+
+EOT;
 
 // Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
 file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $contents );
