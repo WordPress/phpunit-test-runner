@@ -115,7 +115,7 @@ perform_operations(
 // Log a message indicating the start of the variable replacement process for configuration.
 log_message( 'Replacing variables in wp-tests-config.php' );
 
-// Don't validate the TLS certificate. Useful for local environments.
+// Read sample configuration from the prepared repository.
 $contents = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config-sample.php' );
 
 /*
@@ -310,8 +310,8 @@ $env = array(
 	'imagick_info'   => $imagick_info,
 	'mysql_version'  => wpt_runner_get_db_server_version( DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ),
 	'system_utils'   => array(),
-	'os_name'        => trim( shell_exec( 'uname -s' ) ),
-	'os_version'     => trim( shell_exec( 'uname -r' ) ),
+	'os_name'        => trim( (string) shell_exec( 'uname -s' ) ),
+	'os_version'     => trim( (string) shell_exec( 'uname -r' ) ),
 );
 $php_modules = array(
 	'bcmath',
@@ -353,23 +353,27 @@ $php_modules = array(
 foreach ( $php_modules as $php_module ) {
 	$env['php_modules'][ $php_module ] = phpversion( $php_module );
 }
-function curl_selected_bits( $k ) {
-	return in_array( $k, array( 'version', 'ssl_version', 'libz_version' ), true );
+if ( ! function_exists( 'wpt_curl_selected_bits' ) ) {
+	function wpt_curl_selected_bits( $k ) {
+		return in_array( $k, array( 'version', 'ssl_version', 'libz_version' ), true );
+	}
 }
 $curl_bits                   = curl_version();
-$env['system_utils']['curl'] = implode( ' ', array_values( array_filter( $curl_bits, 'curl_selected_bits', ARRAY_FILTER_USE_KEY ) ) );
+$env['system_utils']['curl'] = implode( ' ', array_values( array_filter( $curl_bits, 'wpt_curl_selected_bits', ARRAY_FILTER_USE_KEY ) ) );
 if ( class_exists( 'Imagick' ) ) {
 	$imagick = new Imagick();
 	$version = $imagick->getVersion();
-	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $version );
-	$env['system_utils']['imagemagick'] = $version[1];
+	if ( isset( $version['versionString'] ) && preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $matches ) ) {
+		$env['system_utils']['imagemagick'] = $matches[1];
+	}
 } elseif ( class_exists( 'Gmagick' ) ) {
 	$gmagick = new Gmagick();
 	$version = $gmagick->getversion();
-	preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $version );
-	$env['system_utils']['graphicsmagick'] = $version[1];
+	if ( isset( $version['versionString'] ) && preg_match( '/Magick (\d+\.\d+\.\d+-\d+|\d+\.\d+\.\d+|\d+\.\d+\-\d+|\d+\.\d+)/', $version['versionString'], $matches ) ) {
+		$env['system_utils']['graphicsmagick'] = $matches[1];
+	}
 }
-$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( shell_exec( 'openssl version' ) ) );
+$env['system_utils']['openssl'] = str_replace( 'OpenSSL ', '', trim( (string) shell_exec( 'openssl version' ) ) );
 file_put_contents( __DIR__ . '/tests/phpunit/build/logs/env.json', json_encode( $env, JSON_PRETTY_PRINT ) );
 if ( 'cli' === php_sapi_name() && defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
 	echo PHP_EOL;

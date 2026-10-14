@@ -10,8 +10,8 @@
 		"wp-coding-standards/wpcs": "^3.1"
 	},
 	"scripts": {
-		"format": "@php ./vendor/squizlabs/php_codesniffer/bin/phpcbf --report=summary,source",
-		"lint": "@php ./vendor/squizlabs/php_codesniffer/bin/phpcs --report=summary,source",
+		"format": "@php -r \"if (!is_dir('.cache')) { mkdir('.cache', 0777, true); }\" && @php ./vendor/squizlabs/php_codesniffer/bin/phpcbf --report=summary,source",
+		"lint": "@php -r \"if (!is_dir('.cache')) { mkdir('.cache', 0777, true); }\" && @php ./vendor/squizlabs/php_codesniffer/bin/phpcs --report=summary,source",
 		"lint:errors": "@lint -n"
 	},
 	"config": {
