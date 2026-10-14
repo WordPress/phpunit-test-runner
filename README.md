@@ -62,6 +62,8 @@ export WPT_TEST_DIR=wp-test-runner-$TRAVIS_BUILD_NUMBER
 export WPT_TABLE_PREFIX=wptests_$TRAVIS_BUILD_NUMBER\_
 ```
 
+WordPress's temporary directory (the path returned by `get_temp_dir()`) is set to a `wp-temp` directory inside the test directory, so runs with their own `WPT_TEST_DIR` don't collide on fixed file names in the system temp directory.
+
 Connect to a remote environment over SSH by having the CI job provision the SSH key:
 
 ```bash
@@ -94,9 +96,9 @@ To use the Runner, the following is required to test WordPress version 6.6 or la
 
 - Server / hosting (infrastructure) with the usual configuration you use
 - A database where you can test (tables will be created and destroyed several times)
-- PHP 7.2+
+- PHP 7.4+
 - MySQL 5.5.5+ / MariaDB 5.5.5+
-- NodeJS 20.x / npm 10.x / grunt
+- NodeJS 24.x / npm 11.x / grunt (WordPress trunk requires Node.js 24.18 or later and npm 11.16 or later, and `npm install` fails on older versions)
 - PHP Composer
 - Git, RSync, WGet, UnZip
 
@@ -123,7 +125,7 @@ FLUSH PRIVILEGES;
 _This is a simple example for Debian / Ubuntu._
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt -y install nodejs
 sudo npm install -g npm@latest
 nodejs --version
@@ -241,7 +243,7 @@ export WPT_SSH_OPTIONS=""
 export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 # Output logging
-# Use 'verbose' to increase verbosity
+# Use 'verbose' to increase verbosity; also runs npm with --loglevel=silly
 export WPT_DEBUG=""
 
 # Certificate validation
@@ -277,7 +279,7 @@ export WPT_PREPARE_DIR="/tmp/wp-test-runner"
 
 **Test directory**
 
-Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally.
+Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally. WordPress's temporary directory (`WP_TEMP_DIR`) is set to a `wp-temp` directory inside this path.
 
 
 ```
@@ -395,7 +397,7 @@ export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 **Output logging**
 
-Output logging. Use 'verbose' to increase verbosity.
+Output logging. Use 'verbose' to increase verbosity. When set, the npm install and build commands during preparation also run with `--loglevel=silly`.
 
 ```
 export WPT_DEBUG=""
