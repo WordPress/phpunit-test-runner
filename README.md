@@ -155,7 +155,7 @@ The Node.js and npm versions must be compatible with the versions specified in t
 
 #### Development build
 
-`prepare.php` runs the development build (`npm run build:dev`), the same build that WordPress Core's own PHPUnit workflow runs. It writes the built files into `src/`, which the tests load, and skips the production work that PHPUnit does not need: the `build/` directory and the JavaScript and CSS minification. [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
+`prepare.php` runs the development build (`npm run build:dev`), the same build that WordPress Core's own PHPUnit workflow runs. It writes the built files into `src/`, which the tests load, and skips the production `build/` directory. [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
 
 ### PHP Composer
 
