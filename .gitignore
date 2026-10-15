@@ -1,7 +1,8 @@
 .DS_Store
 .env*
 vendor/
-.cache/
+.cache/*
+!.cache/.gitkeep
 package-lock.json
 commit.json
 ignore.json
