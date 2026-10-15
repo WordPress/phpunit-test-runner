@@ -58,14 +58,12 @@ function check_required_env( $check_db = true ) {
  *                                                   after being prepared. Default '/tmp/wp-test-runner'.
  *          @type string $WPT_PREPARE_DIR            Path to the temporary directory where wordpress-develop is cloned
  *                                                   and configured. Default '/tmp/wp-test-runner'.
- *          @type string $WPT_SSH_CONNECT            List of inner blocks. An array of arrays that
- *                                                   have the same structure as this one.
- *          @type string $WPT_SSH_OPTIONS            HTML from inside block comment delimiters.
- *          @type string $WPT_PHP_EXECUTABLE         List of string fragments and null markers where
- *                                                   inner blocks were found.
+ *          @type string $WPT_SSH_CONNECT            SSH connection string or alias for remote test execution.
+ *          @type string $WPT_SSH_OPTIONS            Options to pass to the SSH connection.
+ *          @type string $WPT_PHP_EXECUTABLE         Path to the PHP executable.
  *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
  *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
- *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled.
+ *          @type bool   $WPT_DEBUG                  Whether debug mode is enabled.
  *      }
  *  }
  */
@@ -406,9 +404,9 @@ function upload_results( $results, $rev, $message, $env, $api_key ) {
  * @return array|false Parsed connection pieces, or false on invalid input.
  */
 function wpt_runner_parse_db_host( $host ) {
-	$host = (string) $host;
-	$socket = null;
-	$port = null;
+	$host    = (string) $host;
+	$socket  = null;
+	$port    = null;
 	$is_ipv6 = false;
 
 	if ( '' === $host ) {
@@ -418,7 +416,7 @@ function wpt_runner_parse_db_host( $host ) {
 	$socket_pos = strpos( $host, ':/' );
 	if ( false !== $socket_pos ) {
 		$socket = substr( $host, $socket_pos + 1 );
-		$host = substr( $host, 0, $socket_pos );
+		$host   = substr( $host, 0, $socket_pos );
 	}
 
 	if ( substr_count( $host, ':' ) > 1 ) {
@@ -426,7 +424,7 @@ function wpt_runner_parse_db_host( $host ) {
 			return false;
 		}
 		$parsed_host = ! empty( $matches['host'] ) ? $matches['host'] : ( isset( $matches['host_unbracketed'] ) ? $matches['host_unbracketed'] : '' );
-		$is_ipv6 = true;
+		$is_ipv6     = true;
 	} else {
 		if ( 1 !== preg_match( '/^(?P<host>[^:]*)(?::(?P<port>[0-9]+))?$/', $host, $matches ) ) {
 			return false;
@@ -463,10 +461,10 @@ function wpt_runner_parse_db_host( $host ) {
  * @return string Raw server version string, or an empty string.
  */
 function wpt_runner_get_db_server_version( $db_host, $db_user, $db_password, $db_name ) {
-	$db_host = trim( (string) $db_host );
-	$db_user = trim( (string) $db_user );
+	$db_host     = trim( (string) $db_host );
+	$db_user     = trim( (string) $db_user );
 	$db_password = (string) $db_password;
-	$db_name = trim( (string) $db_name );
+	$db_name     = trim( (string) $db_name );
 
 	if ( '' === $db_host ) {
 		$db_host = 'localhost';
@@ -506,12 +504,12 @@ function wpt_runner_get_db_server_version( $db_host, $db_user, $db_password, $db
 		$connect_host = '[' . $connect_host . ']';
 	}
 
-	$mysqli = null;
+	$mysqli             = null;
 	$mysqli_report_mode = null;
 
 	try {
 		if ( class_exists( 'mysqli_driver' ) ) {
-			$mysqli_driver = new mysqli_driver();
+			$mysqli_driver      = new mysqli_driver();
 			$mysqli_report_mode = $mysqli_driver->report_mode;
 		}
 
@@ -615,14 +613,14 @@ function get_env_details() {
 	$wpt_db_name = trim( getenv( 'WPT_DB_NAME' ) );
 
 	$env = array(
-		'php_version'    => phpversion(),
-		'php_modules'    => array(),
-		'gd_info'        => $gd_info,
-		'imagick_info'   => $imagick_info,
-		'mysql_version'  => wpt_runner_get_db_server_version( $wpt_db_host, $wpt_db_user, $wpt_db_password, $wpt_db_name ),
-		'system_utils'   => array(),
-		'os_name'        => trim( shell_exec( 'uname -s' ) ),
-		'os_version'     => trim( shell_exec( 'uname -r' ) ),
+		'php_version'   => phpversion(),
+		'php_modules'   => array(),
+		'gd_info'       => $gd_info,
+		'imagick_info'  => $imagick_info,
+		'mysql_version' => wpt_runner_get_db_server_version( $wpt_db_host, $wpt_db_user, $wpt_db_password, $wpt_db_name ),
+		'system_utils'  => array(),
+		'os_name'       => trim( shell_exec( 'uname -s' ) ),
+		'os_version'    => trim( shell_exec( 'uname -r' ) ),
 	);
 	unset( $gd_info, $imagick_info );
 
