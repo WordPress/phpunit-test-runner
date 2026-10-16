@@ -69,34 +69,6 @@ run_step() {
 	return "${code}"
 }
 
-# Waits for the database server to accept connections with the configured credentials.
-wait_for_database() {
-	local attempts="${WPT_DB_WAIT_ATTEMPTS:-60}"
-	local i
-
-	echo "Waiting for the database at ${WPT_DB_HOST:-localhost} ..."
-	for (( i = 1; i <= attempts; i++ )); do
-		if php -r '
-			mysqli_report( MYSQLI_REPORT_OFF );
-			$host = getenv( "WPT_DB_HOST" ) ?: "localhost";
-			$port = null;
-			if ( preg_match( "/^([^:]+):([0-9]+)$/", $host, $m ) ) {
-				$host = $m[1];
-				$port = (int) $m[2];
-			}
-			$db = @mysqli_connect( $host, getenv( "WPT_DB_USER" ), getenv( "WPT_DB_PASSWORD" ), getenv( "WPT_DB_NAME" ), $port );
-			exit( $db ? 0 : 1 );
-		'; then
-			echo "Database is ready."
-			return 0
-		fi
-		sleep 2
-	done
-
-	echo "Error: the database did not become available after ${attempts} attempts." >&2
-	return 1
-}
-
 # Copies junit.xml and env.json out of the prepare directory before cleanup removes it.
 collect_results() {
 	local prepare_dir="${WPT_PREPARE_DIR:-/tmp/wp-test-runner}"
@@ -113,13 +85,7 @@ collect_results() {
 	fi
 }
 
-if [ -z "${WPT_SSH_CONNECT:-}" ] && ! wait_for_database; then
-	record database failed 1 0
-	record prepare skipped - 0
-	record test skipped - 0
-	record report skipped - 0
-	exit_code=1
-elif run_step prepare; then
+if run_step prepare; then
 	if [ -n "${WPT_IGNORE_TEST_FAILURES:-}" ] && [ "${WPT_IGNORE_TEST_FAILURES}" != 0 ]; then
 		run_step test optional
 	else
