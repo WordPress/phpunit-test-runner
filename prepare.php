@@ -115,7 +115,7 @@ perform_operations(
 // Log a message indicating the start of the variable replacement process for configuration.
 log_message( 'Replacing variables in wp-tests-config.php' );
 
-// Don't validate the TLS certificate. Useful for local environments.
+// Read sample configuration from the prepared repository.
 $contents = file_get_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config-sample.php' );
 
 /*

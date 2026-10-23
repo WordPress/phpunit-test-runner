@@ -58,14 +58,12 @@ function check_required_env( $check_db = true ) {
  *                                                   after being prepared. Default '/tmp/wp-test-runner'.
  *          @type string $WPT_PREPARE_DIR            Path to the temporary directory where wordpress-develop is cloned
  *                                                   and configured. Default '/tmp/wp-test-runner'.
- *          @type string $WPT_SSH_CONNECT            List of inner blocks. An array of arrays that
- *                                                   have the same structure as this one.
- *          @type string $WPT_SSH_OPTIONS            HTML from inside block comment delimiters.
- *          @type string $WPT_PHP_EXECUTABLE         List of string fragments and null markers where
- *                                                   inner blocks were found.
+ *          @type string $WPT_SSH_CONNECT            SSH connection string or alias for remote test execution.
+ *          @type string $WPT_SSH_OPTIONS            Options to pass to the SSH connection.
+ *          @type string $WPT_PHP_EXECUTABLE         Path to the PHP executable.
  *          @type string $WPT_RM_TEST_DIR_CMD        Command for removing the test directory.
  *          @type string $WPT_REPORT_API_KEY         API key for submitting test results.
- *          @type bool   $WPT_DEBUG_MODE             Whether debug mode is enabled.
+ *          @type bool   $WPT_DEBUG                  Whether debug mode is enabled.
  *      }
  *  }
  */
