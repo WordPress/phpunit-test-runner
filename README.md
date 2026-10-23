@@ -38,6 +38,8 @@ The test suite runner can be used in one of two ways:
 1. With GitHub Actions, (or Travis, Circle, or another CI service) as the controller that connects to the remote test environment.
 2. With the runner cloned to and run directly within the test environment.
 
+For the second way, the [host tools](host-tools/README.md) do most of the work: `host-tools/setup.sh` creates `.env` with prompts, and `host-tools/testrunner.sh` runs the full test cycle in one step for cron.
+
 The test runner is configured through environment variables, documented in [`.env.default`](.env.default). It shouldn't need any code modifications; in fact, please refrain from editing the scripts entirely, as it will make it easier to stay up to date.
 
 With a direct Git clone, you can:
