@@ -89,6 +89,7 @@ $npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
  * The following actions are performed:
  * - Creates a directory to prepare wordpress-develop.
  * - Clones the WordPress/wordpress-develop repository from GitHub.
+ * - Checks that the test environment runs a PHP version the checkout supports.
  * - Install npm dependencies and run the development build script.
  */
 // Prepare an array of shell commands to set up the testing environment.
@@ -101,6 +102,67 @@ perform_operations(
 		// Clone the WordPress develop repository from GitHub into the preparation directory.
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
+
+	)
+);
+
+/*
+ * Construct a command that generates a PHP version string compatible with
+ * PHPUnit version requirements.
+ */
+$php_version_cmd = $runner_vars['WPT_PHP_EXECUTABLE'] . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
+
+/**
+ * If an SSH connection string is provided, the command to determine the PHP version is modified
+ * to execute remotely over SSH. This is required if the test environment is not the local machine.
+ */
+if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+	// The PHP version check command is prefixed with the SSH command, including SSH options,
+	// and the connection string, ensuring the command is executed on the remote machine.
+	$php_version_cmd = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $php_version_cmd );
+}
+
+// Initialize return value variable for the exec function call.
+$retval = 0;
+
+/*
+ * Execute the constructed command to obtain the PHP version of the test
+ * environment.
+ *
+ * The output is stored in $env_php_version and the return value of the
+ * command execution is stored in $retval.
+ */
+$env_php_version = exec( $php_version_cmd, $output, $retval );
+
+// Check if the command execution was successful by inspecting the return value.
+if ( 0 !== $retval ) {
+	error_message( 'Could not retrieve the environment PHP Version.' );
+}
+
+// Log the obtained PHP version for confirmation and debugging purposes.
+log_message( 'Environment PHP Version: ' . $env_php_version );
+
+/*
+ * Confirm that the test environment meets the minimum PHP version of the
+ * WordPress version just cloned, before the npm install and build. The
+ * minimum is read from the checkout, so the check follows WordPress when
+ * that minimum changes.
+ *
+ * When the requirements are not met, execution will end with an error message.
+ */
+$version_file         = $runner_vars['WPT_PREPARE_DIR'] . '/src/wp-includes/version.php';
+$required_php_version = wpt_runner_get_required_php_version( $version_file );
+
+if ( '' === $required_php_version ) {
+	error_message( 'Could not read the required PHP version from ' . $version_file . '.' );
+}
+
+if ( version_compare( $env_php_version, $required_php_version, '<' ) ) {
+	error_message( 'WordPress requires PHP ' . $required_php_version . ' or later, but the test environment runs PHP ' . $env_php_version . '.' );
+}
+
+perform_operations(
+	array(
 
 		/*
 		 * Change directory to the preparation directory, install npm dependencies, and build the project.
@@ -449,53 +511,6 @@ EOT;
 
 // Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
 file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $contents );
-
-/*
- * Construct a command that generates a PHP version string compatible with
- * PHPUnit version requirements.
- */
-$php_version_cmd = $runner_vars['WPT_PHP_EXECUTABLE'] . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
-
-/**
- * If an SSH connection string is provided, the command to determine the PHP version is modified
- * to execute remotely over SSH. This is required if the test environment is not the local machine.
- */
-if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	// The PHP version check command is prefixed with the SSH command, including SSH options,
-	// and the connection string, ensuring the command is executed on the remote machine.
-	$php_version_cmd = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $php_version_cmd );
-}
-
-// Initialize return value variable for the exec function call.
-$retval = 0;
-
-/*
- * Execute the constructed command to obtain the PHP version of the test
- * environment.
- *
- * The output is stored in $env_php_version and the return value of the
- * command execution is stored in $retval.
- */
-$env_php_version = exec( $php_version_cmd, $output, $retval );
-
-// Check if the command execution was successful by inspecting the return value.
-if ( 0 !== $retval ) {
-	error_message( 'Could not retrieve the environment PHP Version.' );
-}
-
-// Log the obtained PHP version for confirmation and debugging purposes.
-log_message( 'Environment PHP Version: ' . $env_php_version );
-
-/*
- * Confirm that the environment meets the minimum PHP version requirement.
- *
- * When the requirements are not met, execution will end with an error message.
- */
-if ( version_compare( $env_php_version, '7.2', '<' ) ) {
-	// Logs an error message indicating the test runner's incompatibility with PHP versions below 7.2.
-	error_message( 'The test runner is not compatible with PHP < 7.2.' );
-}
-
 
 // Check if Composer is installed and available in the PATH.
 $composer_cmd  = 'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . ' && ';
