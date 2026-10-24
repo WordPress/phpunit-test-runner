@@ -83,13 +83,18 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
  */
 $npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
 
+if ( ! in_array( $runner_vars['WPT_ASSETS_SOURCE'], array( 'npm', 'mirror' ), true ) ) {
+	error_message( 'WPT_ASSETS_SOURCE must be "npm" or "mirror", "' . $runner_vars['WPT_ASSETS_SOURCE'] . '" given.' );
+}
+
 /*
  * Checkout and prepare wordpress-develop for testing.
  *
  * The following actions are performed:
  * - Creates a directory to prepare wordpress-develop.
  * - Clones the WordPress/wordpress-develop repository from GitHub.
- * - Install npm dependencies and run the development build script.
+ * - Puts the built files in place: from the WordPress/WordPress mirror when
+ *   WPT_ASSETS_SOURCE is "mirror", otherwise with the npm development build.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations(
@@ -102,15 +107,41 @@ perform_operations(
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
-		/*
-		 * Change directory to the preparation directory, install npm dependencies, and build the project.
-		 * The development build writes the built files into `src/`, which is the directory the test suite
-		 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
-		 */
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build:dev' . $npm_verbosity,
-
 	)
 );
+
+/*
+ * The test suite runs against `src/`, which needs the generated scripts, styles and block assets.
+ * The WordPress/WordPress mirror is built from every develop revision, so with WPT_ASSETS_SOURCE=mirror
+ * those files are downloaded for the exact checked-out revision instead of being built with npm.
+ * When no mirror commit exists for the revision yet, or the download does not hold the expected
+ * files, the npm build below runs as it always did.
+ */
+$built_assets_installed = false;
+
+if ( 'mirror' === $runner_vars['WPT_ASSETS_SOURCE'] ) {
+	log_message( 'Installing the built files from the WordPress/WordPress mirror (WPT_ASSETS_SOURCE=mirror).' );
+	$built_assets_installed = wpt_runner_install_built_assets_from_mirror( $runner_vars['WPT_PREPARE_DIR'], $runner_vars['WPT_DEBUG'] );
+
+	if ( ! $built_assets_installed ) {
+		log_message( 'Falling back to the npm build.' );
+	}
+}
+
+if ( ! $built_assets_installed ) {
+	perform_operations(
+		array(
+
+			/*
+			 * Change directory to the preparation directory, install npm dependencies, and build the project.
+			 * The development build writes the built files into `src/`, which is the directory the test suite
+			 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
+			 */
+			'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build:dev' . $npm_verbosity,
+
+		)
+	);
+}
 
 // Log a message indicating the start of the variable replacement process for configuration.
 log_message( 'Replacing variables in wp-tests-config.php' );
