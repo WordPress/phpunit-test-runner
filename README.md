@@ -516,7 +516,7 @@ What do the symbols mean?
 
 `R` → Means that the test has been marked as risky, for example because it printed output.
 
-At the end of the run, PHPUnit lists the tests with errors, warnings, or failures, then the risky, incomplete, and skipped tests, each with the reason it gives. A skipped test often points to something the environment does not have, such as a PHP extension, so this list is worth reading even when no test fails. For example:
+At the end of the run, PHPUnit lists the tests with errors, warnings, or failures, then the risky, incomplete, and skipped tests, each with the reason it gives. The incomplete and skipped tests are listed because the runner's default PHPUnit command includes `--verbose`; add it to a custom `WPT_PHPUNIT_CMD` to see them there too. A skipped test often points to something the environment does not have, such as a PHP extension, so this list is worth reading even when no test fails. For example:
 
 ```
 There were 62 skipped tests:
