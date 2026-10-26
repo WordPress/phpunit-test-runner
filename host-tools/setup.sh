@@ -132,10 +132,10 @@ ask() {
 		shown="(hidden)"
 	fi
 	if [[ -n "$secret" && -t 0 ]]; then
-		read -r -s -p "$question [$shown]: " answer
+		IFS= read -r -s -p "$question [$shown]: " answer
 		echo
 	else
-		read -r -p "$question [$shown]: " answer
+		IFS= read -r -p "$question [$shown]: " answer
 	fi
 	if [[ -n "$answer" ]]; then
 		printf -v "$var" '%s' "$answer"
