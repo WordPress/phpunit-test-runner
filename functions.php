@@ -452,6 +452,27 @@ function wpt_runner_parse_db_host( $host ) {
 	);
 }
 
+/**
+ * Reads the minimum PHP version that a WordPress checkout requires.
+ *
+ * The version file is loaded inside this function, so its variables stay
+ * local. WordPress reads the requirements of a new version the same way in
+ * update_core().
+ *
+ * @param string $version_file Path to wp-includes/version.php in the checkout.
+ * @return string The required PHP version, or an empty string when the file
+ *                cannot be read or does not set one.
+ */
+function wpt_runner_get_required_php_version( $version_file ) {
+	if ( ! is_readable( $version_file ) ) {
+		return '';
+	}
+
+	include $version_file;
+
+	return isset( $required_php_version ) && is_string( $required_php_version ) ? $required_php_version : '';
+}
+
 // The report.php fallback runs without WordPress bootstrap, so $wpdb is unavailable.
 // phpcs:disable WordPress.DB.RestrictedFunctions -- Direct mysqli is limited to database version reporting.
 /**
