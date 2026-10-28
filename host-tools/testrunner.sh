@@ -46,6 +46,8 @@ if command -v flock >/dev/null 2>&1; then
 		echo "Another test run is still active. Stopping." >&2
 		exit 1
 	fi
+else
+	echo "Warning: flock not found. Overlap protection is off; do not run this script twice on the same checkout at once." >&2
 fi
 
 if [[ "${WPT_SKIP_UPDATE:-0}" != "1" ]]; then
@@ -63,7 +65,7 @@ set -u
 if [[ -n "${WPT_SSH_CONNECT:-}" ]]; then
 	PHP=( php )
 else
-	read -r -a PHP <<< "${WPT_PHP_EXECUTABLE:-php}"
+	PHP=( sh -c "${WPT_PHP_EXECUTABLE:-php}"' "$@"' sh )
 fi
 
 status=0
