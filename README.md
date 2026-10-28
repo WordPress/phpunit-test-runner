@@ -514,6 +514,19 @@ What do the symbols mean?
 
 `I` → Means that the test has been marked as incomplete.
 
+`R` → Means that the test has been marked as risky, for example because it printed output.
+
+At the end of the run, PHPUnit lists the tests with errors, warnings, or failures, then the risky, incomplete, and skipped tests, each with the reason it gives. The incomplete and skipped tests are listed because the runner's default PHPUnit command includes `--verbose`; add it to a custom `WPT_PHPUNIT_CMD` to see them there too. A skipped test often points to something the environment does not have, such as a PHP extension, so this list is worth reading even when no test fails. For example:
+
+```
+There were 62 skipped tests:
+...
+56) Tests_Sitemaps_wpSitemapsRenderer::test_get_sitemap_index_xml
+This test requires the XSL extension.
+```
+
+`junit.xml` marks skipped and incomplete tests without the reason, so the reasons are only in this output. They are not part of the report sent to WordPress.org.
+
 If you follow these steps, everything should work perfectly and not make any mistakes. In case you get any error, it may be normal due to some missing adjustment or extension of PHP, among others. We recommend that you adjust the configuration until it works correctly. After all, this tool is to help you improve the optimal configuration for WordPress in that infrastructure.
 
 ## Creating a report
