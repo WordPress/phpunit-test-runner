@@ -63,10 +63,19 @@ unset( $wpt_extratests_ini );
 // Extra arguments for the default PHPUnit command, for example to leave out a test that fails for a known reason.
 $wpt_phpunit_args = trim( getenv( 'WPT_PHPUNIT_ARGS' ) );
 
-// Construct the command used for running the PHPUnit tests.
+/*
+ * Construct the command used for running the PHPUnit tests.
+ *
+ * PHPUnit always lists the risky tests at the end of the run, but it only
+ * lists the skipped and incomplete tests, with the reason for each, when it
+ * runs with --verbose. junit.xml marks those tests without a reason, so this
+ * output is the only place where a host can see why a test did not run, for
+ * example because a PHP extension is missing. WordPress core's own PHPUnit
+ * workflow runs with --verbose too.
+ */
 $wpt_phpunit_cmd = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if ( empty( $wpt_phpunit_cmd ) ) {
-	$wpt_phpunit_cmd = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests' . $wpt_flavor_txt . $wpt_extratests_txt;
+	$wpt_phpunit_cmd = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests --verbose' . $wpt_flavor_txt . $wpt_extratests_txt;
 	if ( '' !== $wpt_phpunit_args ) {
 		$wpt_phpunit_cmd .= ' ' . $wpt_phpunit_args;
 	}
