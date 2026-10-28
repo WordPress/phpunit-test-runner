@@ -77,12 +77,20 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
 
 
 /*
+ * When debug mode is enabled, run npm at its most verbose logging level, so a
+ * hung or slow npm command shows what it is doing instead of sitting silent.
+ * The same debug mode adds verbosity to the rsync operations further down.
+ */
+$npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
+
+/*
  * Checkout and prepare wordpress-develop for testing.
  *
  * The following actions are performed:
  * - Creates a directory to prepare wordpress-develop.
  * - Clones the WordPress/wordpress-develop repository from GitHub.
- * - Install npm dependencies and run the build script.
+ * - Checks that the test environment runs a PHP version the checkout supports.
+ * - Install npm dependencies and run the development build script.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations(
@@ -95,8 +103,73 @@ perform_operations(
 		// The '--depth=1' flag creates a shallow clone with a history truncated to the last commit.
 		'git clone --depth=1 https://github.com/WordPress/wordpress-develop.git ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ),
 
-		// Change directory to the preparation directory, install npm dependencies, and build the project.
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install && npm run build',
+	)
+);
+
+/*
+ * Construct a command that generates a PHP version string compatible with
+ * PHPUnit version requirements.
+ */
+$php_version_cmd = $runner_vars['WPT_PHP_EXECUTABLE'] . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
+
+/**
+ * If an SSH connection string is provided, the command to determine the PHP version is modified
+ * to execute remotely over SSH. This is required if the test environment is not the local machine.
+ */
+if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
+	// The PHP version check command is prefixed with the SSH command, including SSH options,
+	// and the connection string, ensuring the command is executed on the remote machine.
+	$php_version_cmd = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $php_version_cmd );
+}
+
+// Initialize return value variable for the exec function call.
+$retval = 0;
+
+/*
+ * Execute the constructed command to obtain the PHP version of the test
+ * environment.
+ *
+ * The output is stored in $env_php_version and the return value of the
+ * command execution is stored in $retval.
+ */
+$env_php_version = exec( $php_version_cmd, $output, $retval );
+
+// Check if the command execution was successful by inspecting the return value.
+if ( 0 !== $retval ) {
+	error_message( 'Could not retrieve the environment PHP Version.' );
+}
+
+// Log the obtained PHP version for confirmation and debugging purposes.
+log_message( 'Environment PHP Version: ' . $env_php_version );
+
+/*
+ * Confirm that the test environment meets the minimum PHP version of the
+ * WordPress version just cloned, before the npm install and build. The
+ * minimum is read from the checkout, so the check follows WordPress when
+ * that minimum changes.
+ *
+ * When the requirements are not met, execution will end with an error message.
+ */
+$version_file         = $runner_vars['WPT_PREPARE_DIR'] . '/src/wp-includes/version.php';
+$required_php_version = wpt_runner_get_required_php_version( $version_file );
+
+if ( '' === $required_php_version ) {
+	error_message( 'Could not read the required PHP version from ' . $version_file . '.' );
+}
+
+if ( version_compare( $env_php_version, $required_php_version, '<' ) ) {
+	error_message( 'WordPress requires PHP ' . $required_php_version . ' or later, but the test environment runs PHP ' . $env_php_version . '.' );
+}
+
+perform_operations(
+	array(
+
+		/*
+		 * Change directory to the preparation directory, install npm dependencies, and build the project.
+		 * The development build writes the built files into `src/`, which is the directory the test suite
+		 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
+		 */
+		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build:dev' . $npm_verbosity,
 
 	)
 );
@@ -378,77 +451,66 @@ if ( false === strpos( $contents, $logger_replace_string ) ) {
 $system_logger = $logger_replace_string . $system_logger;
 
 // Define a string that will set the 'WP_PHP_BINARY' constant to the path of the PHP executable.
-$php_binary_string = 'define( \'WP_PHP_BINARY\', \'' . $runner_vars['WPT_PHP_EXECUTABLE'] . '\' );';
+$php_binary_string = 'define( \'WP_PHP_BINARY\', \'' . addcslashes( $runner_vars['WPT_PHP_EXECUTABLE'], "\\'" ) . '\' );';
 
 /*
  * Map configuration file placeholders to environment-specific values.
  *
- * This is used in the subsequent str_replace operation to replace placeholder
- * values in the wp-tests-config-sample.php file with the ones provided.
+ * The values are written into single-quoted PHP strings, so their backslashes
+ * and single quotes are escaped, as WordPress does when it writes wp-config.php
+ * in wp-admin/setup-config.php. Without that, a database password containing a
+ * single quote, or ending with a backslash, makes wp-tests-config.php a parse
+ * error, and a double backslash is silently turned into one.
  */
 $wpt_table_prefix = trim( getenv( 'WPT_TABLE_PREFIX' ) );
 $search_replace   = array(
-	'wptests_'                              => '' !== $wpt_table_prefix ? $wpt_table_prefix : 'wptests_',
-	'youremptytestdbnamehere'               => trim( getenv( 'WPT_DB_NAME' ) ),
-	'yourusernamehere'                      => trim( getenv( 'WPT_DB_USER' ) ),
-	'yourpasswordhere'                      => trim( getenv( 'WPT_DB_PASSWORD' ) ),
-	'localhost'                             => trim( getenv( 'WPT_DB_HOST' ) ),
+	'wptests_'                              => addcslashes( '' !== $wpt_table_prefix ? $wpt_table_prefix : 'wptests_', "\\'" ),
+	'youremptytestdbnamehere'               => addcslashes( trim( getenv( 'WPT_DB_NAME' ) ), "\\'" ),
+	'yourusernamehere'                      => addcslashes( trim( getenv( 'WPT_DB_USER' ) ), "\\'" ),
+	'yourpasswordhere'                      => addcslashes( trim( getenv( 'WPT_DB_PASSWORD' ) ), "\\'" ),
+	'localhost'                             => addcslashes( trim( getenv( 'WPT_DB_HOST' ) ), "\\'" ),
 	'define( \'WP_PHP_BINARY\', \'php\' );' => $php_binary_string,
 	$logger_replace_string                  => $system_logger,
 );
 
-// Replace the placeholders in the wp-tests-config-sample.php file content with actual values.
-$contents = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $contents );
+/*
+ * Replace the placeholders in a single pass. str_replace() runs each pair over
+ * the result of the previous ones, so a value that contains a later placeholder,
+ * such as a password containing "localhost", would be rewritten. strtr() never
+ * revisits replaced text.
+ */
+$contents = strtr( $contents, $search_replace );
+
+/*
+ * Point the test suite's temporary directory inside the test directory, so
+ * concurrent runs with their own WPT_TEST_DIR do not share the system temp
+ * directory. Core's get_temp_dir() checks the WP_TEMP_DIR constant first,
+ * and several tests write fixed file names into that directory, so two runs
+ * sharing it can delete or overwrite each other's files mid test.
+ *
+ * The path is anchored to the config file's own location, so it stays
+ * correct after the config is copied to a remote test environment, and the
+ * directory is removed together with the test directory during cleanup.
+ */
+$contents .= <<<'EOT'
+
+if ( ! defined( 'WP_TEMP_DIR' ) ) {
+	define( 'WP_TEMP_DIR', __DIR__ . '/wp-temp/' );
+}
+
+if ( ! is_dir( WP_TEMP_DIR ) ) {
+	mkdir( WP_TEMP_DIR, 0777, true );
+}
+
+if ( ! is_dir( WP_TEMP_DIR ) || ! is_writable( WP_TEMP_DIR ) ) {
+	echo 'The temporary directory ' . WP_TEMP_DIR . ' could not be created or is not writable. Fix the permissions on the test directory and run again.' . PHP_EOL;
+	exit( 1 );
+}
+
+EOT;
 
 // Write the modified content to the wp-tests-config.php file, which will be used by the test suite.
 file_put_contents( $runner_vars['WPT_PREPARE_DIR'] . '/wp-tests-config.php', $contents );
-
-/*
- * Construct a command that generates a PHP version string compatible with
- * PHPUnit version requirements.
- */
-$php_version_cmd = $runner_vars['WPT_PHP_EXECUTABLE'] . " -r \"print PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '.' . PHP_RELEASE_VERSION;\"";
-
-/**
- * If an SSH connection string is provided, the command to determine the PHP version is modified
- * to execute remotely over SSH. This is required if the test environment is not the local machine.
- */
-if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	// The PHP version check command is prefixed with the SSH command, including SSH options,
-	// and the connection string, ensuring the command is executed on the remote machine.
-	$php_version_cmd = 'ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . ' ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] ) . ' ' . escapeshellarg( $php_version_cmd );
-}
-
-// Initialize return value variable for the exec function call.
-$retval = 0;
-
-/*
- * Execute the constructed command to obtain the PHP version of the test
- * environment.
- *
- * The output is stored in $env_php_version and the return value of the
- * command execution is stored in $retval.
- */
-$env_php_version = exec( $php_version_cmd, $output, $retval );
-
-// Check if the command execution was successful by inspecting the return value.
-if ( 0 !== $retval ) {
-	error_message( 'Could not retrieve the environment PHP Version.' );
-}
-
-// Log the obtained PHP version for confirmation and debugging purposes.
-log_message( 'Environment PHP Version: ' . $env_php_version );
-
-/*
- * Confirm that the environment meets the minimum PHP version requirement.
- *
- * When the requirements are not met, execution will end with an error message.
- */
-if ( version_compare( $env_php_version, '7.2', '<' ) ) {
-	// Logs an error message indicating the test runner's incompatibility with PHP versions below 7.2.
-	error_message( 'The test runner is not compatible with PHP < 7.2.' );
-}
-
 
 // Check if Composer is installed and available in the PATH.
 $composer_cmd  = 'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . ' && ';

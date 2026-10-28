@@ -62,6 +62,8 @@ export WPT_TEST_DIR=wp-test-runner-$TRAVIS_BUILD_NUMBER
 export WPT_TABLE_PREFIX=wptests_$TRAVIS_BUILD_NUMBER\_
 ```
 
+WordPress's temporary directory (the path returned by `get_temp_dir()`) is set to a `wp-temp` directory inside the test directory, so runs with their own `WPT_TEST_DIR` don't collide on fixed file names in the system temp directory.
+
 Connect to a remote environment over SSH by having the CI job provision the SSH key:
 
 ```bash
@@ -94,9 +96,9 @@ To use the Runner, the following is required to test WordPress version 6.6 or la
 
 - Server / hosting (infrastructure) with the usual configuration you use
 - A database where you can test (tables will be created and destroyed several times)
-- PHP 7.2+
+- PHP 7.4+
 - MySQL 5.5.5+ / MariaDB 5.5.5+
-- NodeJS 20.x / npm 10.x / grunt
+- NodeJS 24.x / npm 11.x / grunt (WordPress trunk requires Node.js 24.18 or later and npm 11.16 or later, and `npm install` fails on older versions)
 - PHP Composer
 - Git, RSync, WGet, UnZip
 
@@ -123,12 +125,37 @@ FLUSH PRIVILEGES;
 _This is a simple example for Debian / Ubuntu._
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt -y install nodejs
 sudo npm install -g npm@latest
 nodejs --version
 npm --version
 ```
+
+### Why Node.js is needed
+
+The PHPUnit test suite itself is written in PHP, but Node.js is required to prepare the WordPress source code before the tests can run.
+
+The test runner uses `prepare.php` to set up a WordPress checkout and prepare it for PHPUnit. As part of this process, it runs the WordPress build tasks (`npm install && npm run build:dev`), including the Gutenberg build step (`build:gutenberg` in the [Gruntfile](https://github.com/WordPress/wordpress-develop/blob/trunk/Gruntfile.js)). This is necessary because some files used by WordPress Core are generated or assembled as part of the build process rather than being available directly in the `wordpress-develop` checkout. These files were removed from version control in [changeset 61438](https://core.trac.wordpress.org/changeset/61438).
+
+The Gutenberg build step:
+
+1. Uses the Gutenberg version pinned by WordPress Core (`gutenberg.sha` in `package.json`).
+2. Downloads the corresponding pre-built Gutenberg artifact from GitHub Container Registry (`ghcr.io`). The download redirects to `pkg-containers.githubusercontent.com`, so the server must be able to connect to both domains.
+3. Copies the required Gutenberg files into the WordPress `src/` directory.
+4. Makes those files available to the WordPress installation that PHPUnit loads during the test run.
+
+The PHPUnit test suite loads WordPress from the `src/` directory. Therefore, these build steps must complete successfully before the tests can run. If the Gutenberg files have not been prepared, the test suite can fail while loading WordPress because required files are missing, as happened with `src/wp-includes/build/routes.php` in [#292](https://github.com/WordPress/phpunit-test-runner/issues/292).
+
+This is why Node.js and npm are requirements for the test runner even though the tests themselves are written in PHP.
+
+#### Versions
+
+The Node.js and npm versions must be compatible with the versions specified in the `engines` and `devEngines` fields of `wordpress-develop/package.json`. Because of these fields and the repository's `engine-strict` npm setting, using an unsupported Node.js or npm version causes `npm install` to fail, for example with `npm error code EBADDEVENGINES`.
+
+#### Development build
+
+`prepare.php` runs the development build (`npm run build:dev`), the same build that WordPress Core's own PHPUnit workflow runs. It writes the built files into `src/`, which the tests load, and skips the production `build/` directory. [#244](https://github.com/WordPress/phpunit-test-runner/issues/244) tracks ways to make this step smaller.
 
 ### PHP Composer
 
@@ -241,7 +268,7 @@ export WPT_SSH_OPTIONS=""
 export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 # Output logging
-# Use 'verbose' to increase verbosity
+# Use 'verbose' to increase verbosity; also runs npm with --loglevel=silly
 export WPT_DEBUG=""
 
 # Certificate validation
@@ -277,7 +304,7 @@ export WPT_PREPARE_DIR="/tmp/wp-test-runner"
 
 **Test directory**
 
-Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally.
+Path to the directory where the WordPress develop checkout can be placed and tests can be run. When running tests in the same environment, set WPT_TEST_DIR to WPT_PREPARE_DIR equally. WordPress's temporary directory (`WP_TEMP_DIR`) is set to a `wp-temp` directory inside this path.
 
 
 ```
@@ -395,7 +422,7 @@ export WPT_SSH_PRIVATE_KEY_BASE64=""
 
 **Output logging**
 
-Output logging. Use 'verbose' to increase verbosity.
+Output logging. Use 'verbose' to increase verbosity. When set, the npm install and build commands during preparation also run with `--loglevel=silly`.
 
 ```
 export WPT_DEBUG=""
@@ -638,6 +665,38 @@ If you want to check how is everything working...
 journalctl -u testrunner.timer
 journalctl -n 120 -u testrunner.service
 ```
+
+### Docker
+
+The runner can also be run in containers, with a disposable database, using [Docker Compose](https://docs.docker.com/compose/). The image in [`docker/Dockerfile`](docker/Dockerfile) installs PHP with the extensions the test suite uses, Composer, Node.js, Git, rsync, and an SSH client, so nothing needs to be installed on the host besides Docker.
+
+```bash
+mkdir -p output
+WPT_UID=$(id -u) docker compose up --build --abort-on-container-exit --exit-code-from runner
+docker compose down --volumes
+```
+
+This runs `prepare.php`, `test.php`, `report.php`, and `cleanup.php` in order. The test and report steps are skipped when preparing the environment fails, and the cleanup step always runs. The command exits with the exit code of the first step that failed.
+
+When the run finishes, the `output/` directory contains:
+
+- `prepare.log`, `test.log`, `report.log`, and `cleanup.log`: the output of each step.
+- `junit.xml` and `env.json`: the test results and environment details.
+- `summary.md`: a Markdown summary of the steps, the test results, and any failures.
+
+The PHP and database versions are chosen with environment variables. Any variable from [`.env.default`](.env.default) that is listed in [`compose.yaml`](compose.yaml) is passed through to the runner, so setting `WPT_REPORT_API_KEY` reports the results to WordPress.org.
+
+```bash
+PHP_VERSION=8.1 WPT_DB_IMAGE=mariadb:10.6 docker compose up --build --abort-on-container-exit --exit-code-from runner
+```
+
+`PHP_VERSION` is any tag of the official [`php`](https://hub.docker.com/_/php) image. The PHP 7.x images are built on Debian releases that no longer receive updates, so the image may fail to build for them.
+
+Set `WPT_IGNORE_TEST_FAILURES=1` to exit with 0 when WordPress tests fail but every runner step worked. A test run that produces no `junit.xml` results still fails.
+
+To open a shell in the runner image instead, use `docker compose run --rm runner bash`.
+
+The [Container Tests](.github/workflows/container-tests.yml) workflow runs the same setup on every pull request. It shows the summary on the workflow run and uploads the `output/` directory as an artifact. The [Container Tests Report](.github/workflows/container-tests-report.yml) workflow then posts the summaries as a comment on the pull request, and updates that comment on later runs.
 
 ## Contributing
 
