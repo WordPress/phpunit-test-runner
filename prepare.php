@@ -83,6 +83,10 @@ if ( ! empty( $wpt_ssh_private_key_base64 ) ) {
  */
 $npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
 
+if ( ! in_array( $runner_vars['WPT_ASSETS_SOURCE'], array( 'npm', 'mirror' ), true ) ) {
+	error_message( 'WPT_ASSETS_SOURCE must be "npm" or "mirror", "' . $runner_vars['WPT_ASSETS_SOURCE'] . '" given.' );
+}
+
 /*
  * Checkout and prepare wordpress-develop for testing.
  *
@@ -90,7 +94,8 @@ $npm_verbosity = $runner_vars['WPT_DEBUG'] ? ' --loglevel=silly' : '';
  * - Creates a directory to prepare wordpress-develop.
  * - Clones the WordPress/wordpress-develop repository from GitHub.
  * - Checks that the test environment runs a PHP version the checkout supports.
- * - Install npm dependencies and run the development build script.
+ * - Puts the built files in place: from the WordPress/WordPress mirror when
+ *   WPT_ASSETS_SOURCE is "mirror", otherwise with the npm development build.
  */
 // Prepare an array of shell commands to set up the testing environment.
 perform_operations(
@@ -144,8 +149,8 @@ log_message( 'Environment PHP Version: ' . $env_php_version );
 
 /*
  * Confirm that the test environment meets the minimum PHP version of the
- * WordPress version just cloned, before the npm install and build. The
- * minimum is read from the checkout, so the check follows WordPress when
+ * WordPress version just cloned, before the built files are put in place.
+ * The minimum is read from the checkout, so the check follows WordPress when
  * that minimum changes.
  *
  * When the requirements are not met, execution will end with an error message.
@@ -161,18 +166,38 @@ if ( version_compare( $env_php_version, $required_php_version, '<' ) ) {
 	error_message( 'WordPress requires PHP ' . $required_php_version . ' or later, but the test environment runs PHP ' . $env_php_version . '.' );
 }
 
-perform_operations(
-	array(
+/*
+ * The test suite runs against `src/`, which needs the generated scripts, styles and block assets.
+ * The WordPress/WordPress mirror is built from every develop revision, so with WPT_ASSETS_SOURCE=mirror
+ * those files are downloaded for the exact checked-out revision instead of being built with npm.
+ * When no mirror commit exists for the revision yet, or the download does not hold the expected
+ * files, the npm build below runs as it always did.
+ */
+$built_assets_installed = false;
 
-		/*
-		 * Change directory to the preparation directory, install npm dependencies, and build the project.
-		 * The development build writes the built files into `src/`, which is the directory the test suite
-		 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
-		 */
-		'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build:dev' . $npm_verbosity,
+if ( 'mirror' === $runner_vars['WPT_ASSETS_SOURCE'] ) {
+	log_message( 'Installing the built files from the WordPress/WordPress mirror (WPT_ASSETS_SOURCE=mirror).' );
+	$built_assets_installed = wpt_runner_install_built_assets_from_mirror( $runner_vars['WPT_PREPARE_DIR'], $runner_vars['WPT_DEBUG'] );
 
-	)
-);
+	if ( ! $built_assets_installed ) {
+		log_message( 'Falling back to the npm build.' );
+	}
+}
+
+if ( ! $built_assets_installed ) {
+	perform_operations(
+		array(
+
+			/*
+			 * Change directory to the preparation directory, install npm dependencies, and build the project.
+			 * The development build writes the built files into `src/`, which is the directory the test suite
+			 * runs against. It is the same build that WordPress core's own PHPUnit workflow runs.
+			 */
+			'cd ' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '; npm install' . $npm_verbosity . ' && npm run build:dev' . $npm_verbosity,
+
+		)
+	);
+}
 
 // Log a message indicating the start of the variable replacement process for configuration.
 log_message( 'Replacing variables in wp-tests-config.php' );
