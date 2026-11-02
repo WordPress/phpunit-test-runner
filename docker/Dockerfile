@@ -44,6 +44,7 @@ RUN install-php-extensions \
 		pdo_mysql \
 		soap \
 		sockets \
+		xsl \
 		zip \
 	&& { \
 		echo 'memory_limit=1G'; \
