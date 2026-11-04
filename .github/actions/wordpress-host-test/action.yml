@@ -40,10 +40,7 @@ inputs:
     required: false
   php-version:
     description: The version of PHP running in GitHub actions (to match with the version being run on your environment).
-    default: '.8.4'  
-  test-filter:
-    description: A regular expression to filter tests that should be run.
-    default: '.*'
+    default: '8.4'
   test-filter:
     description: A regular expression to filter tests that should be run.
     default: '.*'
