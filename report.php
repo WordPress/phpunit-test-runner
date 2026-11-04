@@ -42,10 +42,31 @@ $rev = exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] 
 /*
  * Retrieve the SVN commit message from the repository's Git log.
  *
- * The `git log` command is used to fetch the commit message being tested.
+ * The `git log` command is used to fetch the commit message being tested, and
+ * its first line of actual text is reported. A commit message can start with a
+ * blank line (r63330, for example) or contain nothing but the git-svn-id line,
+ * and the Reporter API rejects an empty message, so taking the first line as-is
+ * would fail the whole upload. When no text is found, the revision label is used.
  */
 log_message( 'Getting SVN message' );
-$message = trim( exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B | head -1' ) );
+$message       = '';
+$message_lines = array();
+exec( 'git --git-dir=' . escapeshellarg( $runner_vars['WPT_PREPARE_DIR'] ) . '/.git log -1 --pretty=%B', $message_lines );
+
+foreach ( $message_lines as $message_line ) {
+	$message_line = trim( $message_line );
+
+	if ( '' === $message_line || 0 === strpos( $message_line, 'git-svn-id:' ) ) {
+		continue;
+	}
+
+	$message = $message_line;
+	break;
+}
+
+if ( '' === $message ) {
+	$message = 'r' . $rev;
+}
 
 /**
  * Prepares the file path for copying the junit.xml results.
