@@ -60,6 +60,9 @@ switch ( $wpt_extratests_ini ) {
 }
 unset( $wpt_extratests_ini );
 
+// Extra arguments for the default PHPUnit command, for example to leave out a test that fails for a known reason.
+$wpt_phpunit_args = trim( getenv( 'WPT_PHPUNIT_ARGS' ) );
+
 /*
  * Construct the command used for running the PHPUnit tests.
  *
@@ -73,6 +76,11 @@ unset( $wpt_extratests_ini );
 $wpt_phpunit_cmd = trim( getenv( 'WPT_PHPUNIT_CMD' ) );
 if ( empty( $wpt_phpunit_cmd ) ) {
 	$wpt_phpunit_cmd = 'cd ' . escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . ' && ' . $runner_vars['WPT_PHP_EXECUTABLE'] . ' ./vendor/phpunit/phpunit/phpunit --dont-report-useless-tests --verbose' . $wpt_flavor_txt . $wpt_extratests_txt;
+	if ( '' !== $wpt_phpunit_args ) {
+		$wpt_phpunit_cmd .= ' ' . $wpt_phpunit_args;
+	}
+} elseif ( '' !== $wpt_phpunit_args ) {
+	log_message( 'WPT_PHPUNIT_ARGS is ignored because WPT_PHPUNIT_CMD replaces the whole PHPUnit command.' );
 }
 
 // If an SSH connection string is provided, prepend the SSH command to the PHPUnit execution command.

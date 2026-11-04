@@ -247,6 +247,11 @@ export WPT_PHP_EXECUTABLE=${WPT_PHP_EXECUTABLE-php}
 # Use if `php phpunit.phar` can't be called directly for some reason.
 export WPT_PHPUNIT_CMD=""
 
+# (Optionally) add arguments to the default PHPUnit command, for example to
+# leave out a test that fails for a known reason. Ignored when WPT_PHPUNIT_CMD
+# is set. See "Skipping tests that fail for a known reason" in README.md.
+export WPT_PHPUNIT_ARGS=""
+
 # (Optionally) define the command execution to remove the test directory
 # Use if `rm -rf` can't be called directly for some reason. Include the `-f`
 # flag, or removal stops to ask about write-protected files such as git objects.
@@ -386,6 +391,14 @@ export WPT_PHP_EXECUTABLE_MULTI="7.4=/bin/php7.4;8.3=/bin/php8.3"
 
 ```
 export WPT_PHPUNIT_CMD=""
+```
+
+**PHPUnit arguments**
+
+(Optionally) add arguments to the default PHPUnit command, for example to leave out a test that fails for a known reason. Ignored when `WPT_PHPUNIT_CMD` is set. See [Skipping tests that fail for a known reason](#skipping-tests-that-fail-for-a-known-reason).
+
+```
+export WPT_PHPUNIT_ARGS=""
 ```
 
 **Remove directory command**
@@ -528,6 +541,34 @@ This test requires the XSL extension.
 `junit.xml` marks skipped and incomplete tests without the reason, so the reasons are only in this output. They are not part of the report sent to WordPress.org.
 
 If you follow these steps, everything should work perfectly and not make any mistakes. In case you get any error, it may be normal due to some missing adjustment or extension of PHP, among others. We recommend that you adjust the configuration until it works correctly. After all, this tool is to help you improve the optimal configuration for WordPress in that infrastructure.
+
+### Skipping tests that fail for a known reason
+
+If a test fails on your infrastructure for a reason you already know about, you can leave it out with `WPT_PHPUNIT_ARGS`. Its value is added to the end of the default PHPUnit command. It is ignored when `WPT_PHPUNIT_CMD` is set, because that variable replaces the whole command. Tests left out this way do not run, so they are not part of the results you report.
+
+To leave out one test, use `--filter` with a pattern that matches every test except that one. Use the test name as PHPUnit prints it in the list of failures, in the form `Class::method`. The pattern also leaves out every data set of that test, and keeps tests whose names only start the same way.
+
+```
+export WPT_PHPUNIT_ARGS="--filter '/^(?!Tests_Image_Editor_Imagick::test_resizes_are_small_for_16bit_images( |$))/'"
+```
+
+Keep the single quotes around the pattern. The runner passes the value to a shell, and to the remote shell when `WPT_SSH_CONNECT` is set.
+
+To leave out a whole group of tests, use `--exclude-group`. PHPUnit then excludes only the groups given on the command line and ignores the `<exclude>` list in its configuration file, so groups that are normally left out, such as `ajax` and `external-http`, would run. Add that list to the value as well, copied from the configuration your run uses in your WordPress checkout: `phpunit.xml.dist`, or `tests/phpunit/multisite.xml` when `WPT_FLAVOR` is `1`. The two lists differ. With the lists in WordPress trunk today, that is:
+
+For `WPT_FLAVOR=0`:
+
+```
+export WPT_PHPUNIT_ARGS="--exclude-group the-failing-group,ajax,ms-files,ms-required,external-http,html-api-web-platform-tests"
+```
+
+For `WPT_FLAVOR=1`:
+
+```
+export WPT_PHPUNIT_ARGS="--exclude-group the-failing-group,ajax,ms-files,ms-excluded,external-http,oembed-headers,html-api-web-platform-tests"
+```
+
+When `WPT_EXTRATESTS` is not `0`, the runner already limits the run to one group, and the `<exclude>` list does not apply. In that case, list only the group you want to leave out. Listing the group that `WPT_EXTRATESTS` selects would leave no tests to run.
 
 ## Creating a report
 
