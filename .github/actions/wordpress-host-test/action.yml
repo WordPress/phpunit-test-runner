@@ -1,13 +1,9 @@
 name: WordPress Host Test
+author: WordPress.org
 description: >
-  Run the WordPress Host Test on a remote system reachable via SSH
+  Runs the WordPress PHPUnit test suite on a remote system reachable via SSH and reports the results.
 
 inputs:
-  report-api-key:
-    description: >
-      API key for reporting test results back to wordpress.org; if omitted,
-      test result reporting will be skipped.
-    required: false
   remote-test-dir:
     description: >
       Remote directory in which tests will be run
@@ -37,6 +33,17 @@ inputs:
     description: >
       A base64-encoded SSH private key.
     required: true
+  report-api-key:
+    description: >
+      API key for reporting test results back to wordpress.org; if omitted,
+      test result reporting will be skipped.
+    required: false
+  php-version:
+    description: The version of PHP running in GitHub actions (to match with the version being run on your environment).
+    default: '.8.4'  
+  test-filter:
+    description: A regular expression to filter tests that should be run.
+    default: '.*'
   test-filter:
     description: A regular expression to filter tests that should be run.
     default: '.*'
@@ -44,9 +51,10 @@ runs:
   using: "composite"
   steps:  
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: WordPress/phpunit-test-runner
+        persist-credentials: false
         path: runner
 
     - name: Set up PHP
@@ -54,7 +62,13 @@ runs:
       with:
         php-version: '8.4'
         coverage: none
-
+      name: Checkout .nvmrc file from wordpress-develop
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+            repository: 'WordPress/wordpress-develop'
+            persist-credentials: false
+            sparse-checkout: '.nvmrc'
+            sparse-checkout-cone-mode: false
     - name: Install NodeJS
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
@@ -89,7 +103,7 @@ runs:
       shell: bash
       working-directory: ./runner
 
-    - name: Run unit tests
+    - name: Run PHPUnit tests
       run: php test.php
       continue-on-error: true
       shell: bash
