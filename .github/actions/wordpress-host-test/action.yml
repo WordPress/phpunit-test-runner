@@ -57,19 +57,22 @@ runs:
     - name: Set up PHP
       uses: shivammathur/setup-php@cf4cade2721270509d5b1c766ab3549210a39a2a # v2.33.0
       with:
-        php-version: {{ inputs.php-version }}
+        php-version: ${{ inputs.php-version }}
         coverage: none
-      name: Checkout .nvmrc file from wordpress-develop
+
+    - name: Checkout .nvmrc file from wordpress-develop
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-            repository: 'WordPress/wordpress-develop'
-            persist-credentials: false
-            sparse-checkout: '.nvmrc'
-            sparse-checkout-cone-mode: false
+        repository: 'WordPress/wordpress-develop'
+        persist-credentials: false
+        path: wordpress-develop
+        sparse-checkout: '.nvmrc'
+        sparse-checkout-cone-mode: false
+
     - name: Install NodeJS
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
-        node-version: 20
+        node-version-file: wordpress-develop/.nvmrc
     
     - name: Prepare SSH private key
       shell: bash
