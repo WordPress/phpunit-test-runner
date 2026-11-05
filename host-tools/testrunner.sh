@@ -68,10 +68,20 @@ else
 	PHP=( sh -c "${WPT_PHP_EXECUTABLE:-php}"' "$@"' sh )
 fi
 
+# Claim the prepare directory before the cleanup trap is set. mkdir fails when
+# the directory exists, for example while another run uses it, so the cleanup
+# below never deletes the files or drops the test tables of another run.
+prepare_dir="${WPT_PREPARE_DIR:-/tmp/wp-test-runner}"
+if ! { mkdir -p "$(dirname "$prepare_dir")" && mkdir "$prepare_dir"; }; then
+	echo "Error: could not create $prepare_dir. Another run may still be using it. If no run is active, run cleanup.php to remove it." >&2
+	exit 1
+fi
+
 status=0
 
-# Always clean up, also when a step fails or the run is stopped.
-trap '"${PHP[@]}" cleanup.php || status=1' EXIT
+# Always clean up, also when a step fails or the run is stopped. rmdir removes
+# the claimed directory when cleanup.php could not run, for example with a wrong PHP path.
+trap '"${PHP[@]}" cleanup.php || status=1; rmdir "$prepare_dir" 2>/dev/null' EXIT
 
 if ! "${PHP[@]}" prepare.php; then
 	echo "Error: prepare.php failed. Skipping the tests and the report." >&2
