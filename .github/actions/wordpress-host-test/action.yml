@@ -1,0 +1,153 @@
+name: WordPress Host Test
+author: WordPress.org
+description: >
+  Runs the WordPress PHPUnit test suite on a remote system reachable via SSH and reports the results.
+
+inputs:
+  remote-test-dir:
+    description: >
+      Remote directory in which tests will be run
+    required: true
+  database-host:
+    description: >
+      Database host for running the unit tests
+    required: true
+  database-user:
+    description: >
+      Database user for running the unit tests
+    required: true
+  database-password:
+    description: >
+      Database password for running the unit tests
+    required: true
+  database-name:
+    description: >
+      Database name for running the unit tests
+    required: true
+  ssh-connect:
+    description: >
+      SSH connection string (in the format username@host) for connecting to the
+      hosting environment under test.
+    required: true
+  ssh-private-key:
+    description: >
+      A base64-encoded SSH private key.
+    required: true
+  report-api-key:
+    description: >
+      API key for reporting test results back to wordpress.org; if omitted,
+      test result reporting will be skipped.
+    required: false
+  php-version:
+    description: The version of PHP running in GitHub actions (to match with the version being run on your environment).
+    default: '8.4'
+  test-filter:
+    description: A regular expression to filter tests that should be run.
+    default: '.*'
+runs:
+  using: "composite"
+  steps:  
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: WordPress/phpunit-test-runner
+        persist-credentials: false
+        path: runner
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@cf4cade2721270509d5b1c766ab3549210a39a2a # v2.33.0
+      with:
+        php-version: ${{ inputs.php-version }}
+        coverage: none
+
+    - name: Checkout .nvmrc file from wordpress-develop
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: 'WordPress/wordpress-develop'
+        persist-credentials: false
+        path: wordpress-develop
+        sparse-checkout: '.nvmrc'
+        sparse-checkout-cone-mode: false
+
+    - name: Install NodeJS
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version-file: wordpress-develop/.nvmrc
+    
+    - name: Prepare SSH private key
+      shell: bash
+      if: ${{ inputs.ssh-private-key }}
+      run: |
+        mkdir -p ~/.ssh
+        echo '${{ inputs.ssh-private-key }}' | base64 -d > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+    
+    # This is added as a separate step to catch SSH connection errors (bad
+    # credentials, or similar) early, since prepare.php takes a while before
+    # even attempting an SSH connection.
+    - name: Test SSH connectivity
+      shell: bash
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ inputs.ssh-connect }} whoami
+
+    - name: Prepare environment
+      env:
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
+      run: php prepare.php
+      shell: bash
+      working-directory: ./runner
+
+    - name: Run PHPUnit tests
+      run: php test.php
+      continue-on-error: true
+      shell: bash
+      working-directory: ./runner
+      env:
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
+        WPT_PHPUNIT_CMD: >
+          cd ${{ inputs.remote-test-dir }} && 
+          ./vendor/phpunit/phpunit/phpunit 
+          --dont-report-useless-tests 
+          -c tests/phpunit/multisite.xml
+          --filter '${{ inputs.test-filter }}'
+
+    - name: Report the results
+      run: php report.php
+      continue-on-error: true
+      if: ${{ inputs.report-api-key }}
+      shell: bash
+      working-directory: ./runner
+      env:
+        WPT_REPORT_API_KEY: ${{ inputs.report-api-key }}
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
+
+    - name: Cleanup
+      run: php cleanup.php
+      shell: bash
+      working-directory: ./runner
+      env:
+        WPT_PREPARE_DIR: /tmp/wp-tests
+        WPT_TEST_DIR: ${{ inputs.remote-test-dir }}
+        WPT_DB_NAME: ${{ inputs.database-name }}
+        WPT_DB_USER: ${{ inputs.database-user }}
+        WPT_DB_PASSWORD: ${{ inputs.database-password }}
+        WPT_DB_HOST:  ${{ inputs.database-host }}
+        WPT_SSH_CONNECT: ${{ inputs.ssh-connect }}
