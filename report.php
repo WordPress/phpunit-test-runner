@@ -1,6 +1,6 @@
 <?php
 /**
- * WordPress PHPUnity Test Runner: Report script
+ * WordPress PHPUnit Test Runner: Report script
  *
  * This script is responsible for collecting details related to the testing
  * environment and the outcome of the test suite before reporting the data
