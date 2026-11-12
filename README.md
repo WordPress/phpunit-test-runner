@@ -728,37 +728,54 @@ journalctl -u testrunner.timer
 journalctl -n 120 -u testrunner.service
 ```
 
-### Docker
+### Running using GitHub actions
 
-The runner can also be run in containers, with a disposable database, using [Docker Compose](https://docs.docker.com/compose/). The image in [`docker/Dockerfile`](docker/Dockerfile) installs PHP with the extensions the test suite uses, Composer, Node.js, Git, rsync, and an SSH client, so nothing needs to be installed on the host besides Docker.
+You can also use the GitHub action in `.github/actions/wordpress-host-test` to automatically run this test suite on your host. Since this action will usually run on GitHub's infrastructure, the action presumes that the actual hosting environment will be reachable via SSH.
 
-```bash
-mkdir -p output
-WPT_UID=$(id -u) docker compose up --build --abort-on-container-exit --exit-code-from runner
-docker compose down --volumes
+To run the GitHub action using a schedule, create a new GitHub repository with the following action:
+
+```yaml
+name: Run WordPress Unit Tests
+on:
+  schedule:
+    - cron: 0 0 * * *
+  workflow_dispatch:
+jobs:
+  run-tests:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: WordPress/phpunit-test-runner/.github/actions/wordpress-host-test@master
+        with:
+          report-api-key: '${{ secrets.REPORT_API_KEY }}'
+          ssh-connect: '${{ secrets.SSH_CONNECT }}'
+          ssh-private-key: '${{ secrets.SSH_PRIVATE_KEY }}'
+          remote-test-dir: /files/wordpress-host-test
+          database-host: ${{ secrets.DATABASE_HOST }}
+          database-user: ${{ secrets.DATABASE_USER }}
+          database-name: ${{ secrets.DATABASE_NAME }}
+          database-password: ${{ secrets.DATABASE_PASSWORD }}
 ```
 
-This runs `prepare.php`, `test.php`, `report.php`, and `cleanup.php` in order. The test and report steps are skipped when preparing the environment fails, and the cleanup step always runs. The command exits with the exit code of the first step that failed.
+The action also makes it easy to use matrix builds to run the same test suite across a whole matrix of different environments:
 
-When the run finishes, the `output/` directory contains:
-
-- `prepare.log`, `test.log`, `report.log`, and `cleanup.log`: the output of each step.
-- `junit.xml` and `env.json`: the test results and environment details.
-- `summary.md`: a Markdown summary of the steps, the test results, and any failures.
-
-The PHP and database versions are chosen with environment variables. Any variable from [`.env.default`](.env.default) that is listed in [`compose.yaml`](compose.yaml) is passed through to the runner, so setting `WPT_REPORT_API_KEY` reports the results to WordPress.org.
-
-```bash
-PHP_VERSION=8.1 WPT_DB_IMAGE=mariadb:10.6 docker compose up --build --abort-on-container-exit --exit-code-from runner
+```yaml
+name: Run WordPress Unit Tests
+on: # [...]
+jobs:
+  run-tests:
+    strategy:
+      matrix:
+        ssh-target:
+          - user@php-8.4-host.example
+          - user@php-8.3-host.example
+          - user@php-8.2-host.example
+    steps:
+      - uses: WordPress/phpunit-test-runner/.github/actions/wordpress-host-test@master
+        with:
+          ssh-connect: '${{ matrix.ssh-target }}'
+          # ...
 ```
-
-`PHP_VERSION` is any tag of the official [`php`](https://hub.docker.com/_/php) image. The PHP 7.x images are built on Debian releases that no longer receive updates, so the image may fail to build for them.
-
-Set `WPT_IGNORE_TEST_FAILURES=1` to exit with 0 when WordPress tests fail but every runner step worked. A test run that produces no `junit.xml` results still fails.
-
-To open a shell in the runner image instead, use `docker compose run --rm runner bash`.
-
-The [Container Tests](.github/workflows/container-tests.yml) workflow runs the same setup on every pull request. It shows the summary on the workflow run and uploads the `output/` directory as an artifact. The [Container Tests Report](.github/workflows/container-tests-report.yml) workflow then posts the summaries as a comment on the pull request, and updates that comment on later runs.
 
 ## Contributing
 
