@@ -85,7 +85,9 @@ $junit_location = escapeshellarg( $runner_vars['WPT_TEST_DIR'] ) . '/tests/phpun
  * remote path to ensure that the junit.xml results can be accessed or copied over SSH.
  */
 if ( ! empty( $runner_vars['WPT_SSH_CONNECT'] ) ) {
-	$junit_location = '-e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $junit_location );
+	// Quote the remote path once, together with the host, as prepare.php does. Since rsync 3.2.4 the quotes
+	// of an already quoted WPT_TEST_DIR reach the remote host as part of the path, so the copy fails.
+	$junit_location = '-e "ssh ' . $runner_vars['WPT_SSH_OPTIONS'] . '" ' . escapeshellarg( $runner_vars['WPT_SSH_CONNECT'] . ':' . $runner_vars['WPT_TEST_DIR'] . '/tests/phpunit/build/logs/*' );
 }
 
 // Construct the rsync command for synchronizing the junit.xml file.
