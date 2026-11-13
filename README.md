@@ -284,10 +284,6 @@ export WPT_SSH_PRIVATE_KEY_BASE64=""
 # Use 'verbose' to increase verbosity; also runs npm with --loglevel=silly
 export WPT_DEBUG=""
 
-# Certificate validation
-# Use 1 to validate, and 0 to not validate
-export WPT_CERTIFICATE_VALIDATION=1
-
 # WordPress flavor
 # 0 = WordPress (simple version)
 # 1 = WordPress Multisite
@@ -447,16 +443,6 @@ Output logging. Use 'verbose' to increase verbosity. When set, the npm install a
 
 ```
 export WPT_DEBUG=""
-```
-
-**Certificate validation**
-
-TLS Certificate validation. Use `1` to validate, and `0` to not validate.
-
-This may be useful in some environments with OpenSSL limitations (usually local environments).
-
-```
-export WPT_CERTIFICATE_VALIDATION=0
 ```
 
 **WordPress flavor**
