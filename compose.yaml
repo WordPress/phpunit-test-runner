@@ -40,7 +40,7 @@ services:
       dockerfile: docker/Dockerfile
       args:
         PHP_VERSION: ${PHP_VERSION:-8.3}
-        NODE_VERSION: ${NODE_VERSION:-24}
+        NODE_VERSION: ${NODE_VERSION:-26}
         WPT_UID: ${WPT_UID:-1000}
     depends_on:
       db:
