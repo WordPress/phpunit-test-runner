@@ -11,7 +11,7 @@
 #                 the host user when bind mounting the output directory.
 
 ARG PHP_VERSION=8.3
-ARG NODE_VERSION=24
+ARG NODE_VERSION=26
 
 FROM node:${NODE_VERSION}-bookworm-slim AS node
 
